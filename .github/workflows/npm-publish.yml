@@ -8,8 +8,9 @@ on:
         required: true
         type: string
       sha256:
-        description: 'Expected SHA-256 of the reviewed npm archive'
-        required: true
+        description: 'SHA-256 from the reviewed verification artifact; required when publishing'
+        required: false
+        default: ''
         type: string
       mode:
         description: 'Verify creates evidence only; publish also requires the npm environment approval'
@@ -40,11 +41,14 @@ jobs:
       VERSION: ${{ inputs.version }}
       EXPECTED_SHA256: ${{ inputs.sha256 }}
       EXPECTED_SOURCE_SHA: ${{ github.sha }}
+      RELEASE_MODE: ${{ inputs.mode }}
     steps:
       - name: Validate release inputs
         run: |
           [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || exit 1
-          [[ "$EXPECTED_SHA256" =~ ^[a-f0-9]{64}$ ]] || exit 1
+          if [[ "$RELEASE_MODE" == publish || -n "$EXPECTED_SHA256" ]]; then
+            [[ "$EXPECTED_SHA256" =~ ^[a-f0-9]{64}$ ]] || exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: refs/tags/v${{ inputs.version }}
@@ -72,15 +76,22 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm check
       - run: pnpm pack:sdk
-      - name: Check exact reviewed archive
+      - name: Record candidate checksum and check reviewed bytes when supplied
         run: |
           ARCHIVE="artifacts/appbasehq-react-native-$VERSION.tgz"
           test -f "$ARCHIVE"
-          printf '%s  %s\n' "$EXPECTED_SHA256" "$ARCHIVE" | sha256sum --check --strict
+          sha256sum "$ARCHIVE" | tee artifacts/SHA256SUMS
+          if [[ -n "$EXPECTED_SHA256" ]]; then
+            printf '%s  %s\n' "$EXPECTED_SHA256" "$ARCHIVE" | sha256sum --check --strict
+          fi
+          printf 'Candidate source commit: `%s`\n\n' "$EXPECTED_SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          cat artifacts/SHA256SUMS >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: reviewed-npm-candidate
-          path: artifacts/*.tgz
+          path: |
+            artifacts/*.tgz
+            artifacts/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
 
