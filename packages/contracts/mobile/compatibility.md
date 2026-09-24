@@ -1,8 +1,8 @@
 # SDK compatibility and release policy
 
-The development head targets mobile contract v1. Package versions are independent of the wire version. React Native's published package is currently 0.1.1; current conformance evidence refers to repository code, not a claim that a newly built version is published. Native Swift remains unpublished until distribution and acceptance gates are met.
+Both SDK implementations target mobile contract v1. Package versions are independent of the wire version. Use the versioned installation instructions in each SDK guide and verify that exact npm version or Swift package tag exists. Source conformance evidence alone does not establish publication or acceptance of a different revision.
 
-| Capability                                                | Shared fixture evidence                                                                                    | React Native development source           | Swift development source                                   |
+| Capability                                                | Shared fixture evidence                                                                                    | React Native implementation           | Swift implementation                                   |
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------- |
 | Durable queue, retry/ack, blocked state, storage rollback | Offline restart; partial/invalid/empty acknowledgements; rejection; rate limit; capacity; storage rollback | Implemented; shared runner                | Implemented; same 19 scenarios pass                        |
 | Identify/reset and consent                                | Identity reset; consent restart                                                                            | Implemented; shared runner                | Implemented; same 19 scenarios pass                        |

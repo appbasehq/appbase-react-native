@@ -2,9 +2,9 @@
 
 A small explicit-event SDK for Expo and bare React Native. Its core entry point has no React, React Native, Zod or Expo runtime dependency. The optional `/ui` entry point uses your app’s React and React Native. Supply adapters from the app. Create one instance per app/environment, outside component rendering, and reuse it.
 
-## Development source and compatibility
+## Compatibility and reliability
 
-This checkout contains the **0.2.0 development candidate**. The currently published installation below remains 0.1.1 until the new archive is published and registry-verified. Hardened behavior and shared conformance evidence refer to development source, not an assertion about the older npm package.
+This guide covers version **0.2.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.1.1
+npm install @appbasehq/react-native@0.2.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -24,7 +24,7 @@ The package is published under the Appbase-owned `@appbasehq` npm organization.
 Commit your app’s lockfile. SDK updates are deliberate dependency upgrades and require shipping an app update; deploying the dashboard does not change installed SDKs.
 The core has no runtime dependencies or private workspace imports. Native adapters are supplied by the host app. React Native 0.81 / Expo 54 on the iOS simulator is the tested native configuration; other supported peer versions require app validation.
 
-For SDK development in this repository: `pnpm --filter @appbasehq/react-native build`, then `pnpm sdk:release`. See [release guide](https://appbase.so/docs/sdk-release.md).
+For SDK source development, follow the build and verification commands in the [source repository](https://github.com/appbasehq/appbase-react-native#build-and-verify-this-source). Package publication follows the [release guide](https://appbase.so/docs/sdk-release.md).
 
 Expo example (install compatible packages with `npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto`):
 
