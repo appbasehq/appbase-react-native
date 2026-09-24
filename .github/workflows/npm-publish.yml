@@ -76,6 +76,10 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: pnpm check
       - run: pnpm pack:sdk
+      - name: Check npm archive publication arguments without publishing
+        run: |
+          ARCHIVE="artifacts/appbasehq-react-native-$VERSION.tgz"
+          npm publish "./$ARCHIVE" --dry-run --ignore-scripts --access public
       - name: Record candidate checksum and check reviewed bytes when supplied
         run: |
           ARCHIVE="artifacts/appbasehq-react-native-$VERSION.tgz"
@@ -125,4 +129,4 @@ jobs:
           [[ "$DIST_TAG" == next || "$DIST_TAG" == latest ]] || exit 1
           ARCHIVE="artifacts/appbasehq-react-native-$VERSION.tgz"
           printf '%s  %s\n' "$EXPECTED_SHA256" "$ARCHIVE" | sha256sum --check --strict
-          npm publish "$ARCHIVE" --access public --provenance --ignore-scripts --tag "$DIST_TAG"
+          npm publish "./$ARCHIVE" --access public --provenance --ignore-scripts --tag "$DIST_TAG"
