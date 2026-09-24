@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "id": "consent-restart",
+  "capability": "consent",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "track",
+      "name": "discard_me"
+    },
+    {
+      "op": "setEnabled",
+      "enabled": false
+    },
+    {
+      "op": "track",
+      "name": "ignored"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "flush"
+    },
+    {
+      "op": "setEnabled",
+      "enabled": true
+    },
+    {
+      "op": "track",
+      "name": "resumed"
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:resumed",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "resumed",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": []
+  }
+}

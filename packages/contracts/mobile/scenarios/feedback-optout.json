@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "feedback-optout",
+  "capability": "feedback",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "setEnabled",
+      "enabled": false
+    },
+    {
+      "op": "feedback.submit",
+      "input": {
+        "message": "  Please add dark mode.  ",
+        "email": "  user@example.test  ",
+        "submissionId": "12345678-1234-4234-8234-123456789abc"
+      }
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/feedback",
+        "body": {
+          "platform": "ios",
+          "app_version": "1.0.0",
+          "id": "12345678-1234-4234-8234-123456789abc",
+          "message": "Please add dark mode.",
+          "email": "user@example.test"
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": false,
+      "blocked": false
+    },
+    "diagnostics": []
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "vectors": [
+    {
+      "id": "single-step",
+      "definition": {
+        "steps": ["welcome"]
+      },
+      "expected": "auto-5e3fb5850019fc09"
+    },
+    {
+      "id": "ordered-steps",
+      "definition": {
+        "steps": ["welcome", "goal", "finish"]
+      },
+      "expected": "auto-ee778a8fdfb2fc0b"
+    },
+    {
+      "id": "reordered-steps",
+      "definition": {
+        "steps": ["goal", "welcome", "finish"]
+      },
+      "expected": "auto-dec1ca1fedebcd6b"
+    },
+    {
+      "id": "unicode-question",
+      "definition": {
+        "steps": ["goal"],
+        "questions": [
+          {
+            "id": "goal",
+            "stepId": "goal",
+            "title": "目標 🎉",
+            "type": "single",
+            "options": [
+              {
+                "id": "habit",
+                "label": "習慣 🧑🏽‍💻"
+              },
+              {
+                "id": "focus",
+                "label": "Focus"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": "auto-e421f946f072b3b2"
+    }
+  ]
+}

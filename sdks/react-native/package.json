@@ -1,0 +1,71 @@
+{
+  "name": "@appbasehq/react-native",
+  "version": "0.2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui.d.ts",
+      "default": "./dist/ui.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "pnpm --filter @mobile-analytics/sdk-core build && tsup",
+    "typecheck": "tsc --noEmit",
+    "prepack": "pnpm build"
+  },
+  "devDependencies": {
+    "@mobile-analytics/contracts": "workspace:*",
+    "@mobile-analytics/sdk-core": "workspace:*",
+    "@types/react": "~19.1.17",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "tsup": "8.5.1",
+    "typescript": "~5.9.3"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.73"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
+  },
+  "description": "Appbase analytics for React Native: app opens, onboarding, paywalls, feature events and feedback.",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "keywords": [
+    "react-native",
+    "expo",
+    "analytics",
+    "onboarding",
+    "paywall"
+  ],
+  "homepage": "https://appbase.so/docs/sdk.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/appbasehq/appbase-react-native.git",
+    "directory": "sdks/react-native"
+  },
+  "bugs": {
+    "url": "https://github.com/appbasehq/appbase-react-native/issues"
+  }
+}

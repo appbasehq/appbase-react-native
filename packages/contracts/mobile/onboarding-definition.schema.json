@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$" },
+    "version": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+    },
+    "steps": {
+      "minItems": 1,
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+      }
+    },
+    "questions": {
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+          },
+          "stepId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+          },
+          "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+          "type": { "type": "string", "enum": ["single", "multiple"] },
+          "options": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+                },
+                "label": { "type": "string", "minLength": 1, "maxLength": 80 }
+              },
+              "required": ["id", "label"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["id", "stepId", "title", "type", "options"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["id", "version", "steps"],
+  "additionalProperties": false,
+  "$id": "https://appbase.so/contracts/mobile/v1/onboarding-definition.schema.json",
+  "$comment": "GENERATED from canonical Zod schemas. Do not edit. Custom refinements, conservative client UTF-16 limits and UTF-8 byte limits require behavior.md and validation-vectors.json; standard JSON Schema alone is not equivalent to server validation.",
+  "x-appbase-contract-version": 1,
+  "x-appbase-semantics": "behavior.md"
+}

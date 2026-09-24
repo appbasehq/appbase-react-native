@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "id": "revenuecat-identity-deduplication",
+  "capability": "revenuecat",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "revenuecat.link",
+      "projectId": "proj_test",
+      "appUserId": "$RCAnonymousID:test"
+    },
+    {
+      "op": "revenuecat.link",
+      "projectId": "proj_test",
+      "appUserId": "$RCAnonymousID:test"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "revenuecat.link",
+      "projectId": "proj_test",
+      "appUserId": "$RCAnonymousID:test"
+    },
+    {
+      "op": "identify",
+      "userId": "customer-a"
+    },
+    {
+      "op": "revenuecat.link",
+      "projectId": "proj_test",
+      "appUserId": "$RCAnonymousID:test"
+    },
+    {
+      "op": "reset"
+    },
+    {
+      "op": "revenuecat.link",
+      "projectId": "proj_test",
+      "appUserId": "$RCAnonymousID:test"
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:rc-before",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "revenuecat_identity_linked",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "revenuecat_project_id": "proj_test",
+                "revenuecat_app_user_id": "$RCAnonymousID:test",
+                "link_source": "client"
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:linked",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "identity_linked",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {},
+              "user_id": "customer-a"
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:rc-after-identify",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "revenuecat_identity_linked",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "revenuecat_project_id": "proj_test",
+                "revenuecat_app_user_id": "$RCAnonymousID:test",
+                "link_source": "client"
+              },
+              "user_id": "customer-a"
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:rc-after-reset",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous-after-reset",
+              "name": "revenuecat_identity_linked",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "revenuecat_project_id": "proj_test",
+                "revenuecat_app_user_id": "$RCAnonymousID:test",
+                "link_source": "client"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": []
+  }
+}

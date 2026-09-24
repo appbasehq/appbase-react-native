@@ -1,0 +1,20 @@
+{
+  "name": "@mobile-analytics/sdk-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "pnpm --filter @mobile-analytics/contracts build && tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@mobile-analytics/contracts": "workspace:*",
+    "typescript": "~5.9.3"
+  }
+}

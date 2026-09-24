@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "number", "const": 1 },
+    "event_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "installation_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "anonymous_id": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+    },
+    "user_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "name": { "type": "string", "pattern": "^[a-z][a-z0-9_.]{0,79}$" },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+    },
+    "platform": { "type": "string", "enum": ["ios", "android", "test"] },
+    "app_version": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "properties": {
+      "type": "object",
+      "propertyNames": { "type": "string", "minLength": 1, "maxLength": 80 },
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "string", "maxLength": 2000 },
+          { "type": "number" },
+          { "type": "boolean" },
+          { "type": "null" },
+          {
+            "maxItems": 20,
+            "type": "array",
+            "items": { "type": "string", "maxLength": 200 }
+          }
+        ]
+      }
+    },
+    "onboarding": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+        },
+        "steps": {
+          "minItems": 1,
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+          }
+        },
+        "questions": {
+          "maxItems": 20,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+              },
+              "stepId": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+              },
+              "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+              "type": { "type": "string", "enum": ["single", "multiple"] },
+              "options": {
+                "minItems": 1,
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,79}$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    }
+                  },
+                  "required": ["id", "label"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["id", "stepId", "title", "type", "options"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["id", "version", "steps"],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "event_id",
+    "installation_id",
+    "anonymous_id",
+    "name",
+    "occurred_at",
+    "platform",
+    "app_version",
+    "properties"
+  ],
+  "additionalProperties": false,
+  "$id": "https://appbase.so/contracts/mobile/v1/event.schema.json",
+  "$comment": "GENERATED from canonical Zod schemas. Do not edit. Custom refinements, conservative client UTF-16 limits and UTF-8 byte limits require behavior.md and validation-vectors.json; standard JSON Schema alone is not equivalent to server validation.",
+  "x-appbase-contract-version": 1,
+  "x-appbase-semantics": "behavior.md"
+}

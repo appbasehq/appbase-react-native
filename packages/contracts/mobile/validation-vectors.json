@@ -1,0 +1,823 @@
+{
+  "version": 1,
+  "vectors": [
+    {
+      "id": "flat-event",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "duration": 15,
+          "nullable": null,
+          "tags": ["朝", "🎉"]
+        }
+      }
+    },
+    {
+      "id": "unknown-top-level-field",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "duration": 15,
+          "nullable": null,
+          "tags": ["朝", "🎉"]
+        },
+        "sdk_version": "future-unannounced"
+      }
+    },
+    {
+      "id": "invalid-date",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-02-30T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "duration": 15,
+          "nullable": null,
+          "tags": ["朝", "🎉"]
+        }
+      }
+    },
+    {
+      "id": "missing-offset",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "duration": 15,
+          "nullable": null,
+          "tags": ["朝", "🎉"]
+        }
+      }
+    },
+    {
+      "id": "offset-time",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T20:00:00+08:00",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "duration": 15,
+          "nullable": null,
+          "tags": ["朝", "🎉"]
+        }
+      }
+    },
+    {
+      "id": "bad-uuid",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "not-a-uuid",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "duration": 15,
+          "nullable": null,
+          "tags": ["朝", "🎉"]
+        }
+      }
+    },
+    {
+      "id": "case-sensitive-name",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "WorkoutCompleted",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "duration": 15,
+          "nullable": null,
+          "tags": ["朝", "🎉"]
+        }
+      }
+    },
+    {
+      "id": "nested-properties",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "nested": {
+            "a": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "too-many-properties",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "k0": 0,
+          "k1": 1,
+          "k2": 2,
+          "k3": 3,
+          "k4": 4,
+          "k5": 5,
+          "k6": 6,
+          "k7": 7,
+          "k8": 8,
+          "k9": 9,
+          "k10": 10,
+          "k11": 11,
+          "k12": 12,
+          "k13": 13,
+          "k14": 14,
+          "k15": 15,
+          "k16": 16,
+          "k17": 17,
+          "k18": 18,
+          "k19": 19,
+          "k20": 20,
+          "k21": 21,
+          "k22": 22,
+          "k23": 23,
+          "k24": 24,
+          "k25": 25,
+          "k26": 26,
+          "k27": 27,
+          "k28": 28,
+          "k29": 29,
+          "k30": 30,
+          "k31": 31,
+          "k32": 32,
+          "k33": 33,
+          "k34": 34,
+          "k35": 35,
+          "k36": 36,
+          "k37": 37,
+          "k38": 38,
+          "k39": 39,
+          "k40": 40
+        }
+      }
+    },
+    {
+      "id": "utf16-string-at-limit",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "emoji": "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+        }
+      }
+    },
+    {
+      "id": "server-preserves-codepoint-limit-over-client-utf16-limit",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "emoji": "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+        }
+      }
+    },
+    {
+      "id": "utf8-properties-over-budget",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "a": "界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界",
+          "b": "界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界界"
+        }
+      }
+    },
+    {
+      "id": "empty-property-key",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "": 1
+        }
+      }
+    },
+    {
+      "id": "identity-requires-user",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "identity_linked",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {}
+      }
+    },
+    {
+      "id": "identity-with-user",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "identity_linked",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {},
+        "user_id": "customer-a"
+      }
+    },
+    {
+      "id": "client-cannot-verify-revenue",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "subscription_started",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {}
+      }
+    },
+    {
+      "id": "legacy-paywall-compatible",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "paywall_viewed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "placement": "onboarding",
+          "paywall_version": "v1"
+        }
+      }
+    },
+    {
+      "id": "paywall-product",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "paywall_product_selected",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "paywall_id": "premium",
+          "paywall_version": "1",
+          "paywall_view_id": "10000000-0000-4000-8000-000000000010",
+          "placement": "settings",
+          "product_ids": ["premium.monthly"],
+          "product_id": "premium.monthly"
+        }
+      }
+    },
+    {
+      "id": "paywall-unknown-product",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "paywall_product_selected",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "paywall_id": "premium",
+          "paywall_version": "1",
+          "paywall_view_id": "10000000-0000-4000-8000-000000000010",
+          "placement": "settings",
+          "product_ids": ["premium.monthly"],
+          "product_id": "unlisted"
+        }
+      }
+    },
+    {
+      "id": "partial-onboarding-context",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "paywall_product_selected",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "paywall_id": "premium",
+          "paywall_version": "1",
+          "paywall_view_id": "10000000-0000-4000-8000-000000000010",
+          "placement": "settings",
+          "product_ids": ["premium.monthly"],
+          "product_id": "premium.monthly",
+          "flow_id": "welcome"
+        }
+      }
+    },
+    {
+      "id": "revenuecat-client-evidence",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "revenuecat_identity_linked",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "revenuecat_project_id": "proj_test",
+          "revenuecat_app_user_id": "$RCAnonymousID:test",
+          "link_source": "client"
+        }
+      }
+    },
+    {
+      "id": "revenuecat-incorrect-source",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "revenuecat_identity_linked",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "revenuecat_project_id": "proj_test",
+          "revenuecat_app_user_id": "user",
+          "link_source": "verified"
+        }
+      }
+    },
+    {
+      "id": "onboarding-answer",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "onboarding_answered",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "flow_id": "welcome",
+          "flow_version": "1",
+          "attempt_id": "10000000-0000-4000-8000-000000000020",
+          "step_id": "goal",
+          "question_id": "goal",
+          "answer_ids": ["habit"],
+          "answer_status": "answered",
+          "answer_revision": 1
+        },
+        "onboarding": {
+          "id": "welcome",
+          "version": "1",
+          "steps": ["goal"],
+          "questions": [
+            {
+              "id": "goal",
+              "stepId": "goal",
+              "title": "Your goal?",
+              "type": "single",
+              "options": [
+                {
+                  "id": "habit",
+                  "label": "Build a habit"
+                },
+                {
+                  "id": "focus",
+                  "label": "Focus"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "answer-missing-definition",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "onboarding_answered",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "flow_id": "welcome",
+          "flow_version": "1",
+          "attempt_id": "10000000-0000-4000-8000-000000000020",
+          "step_id": "goal",
+          "question_id": "goal",
+          "answer_ids": ["habit"],
+          "answer_status": "answered",
+          "answer_revision": 1
+        }
+      }
+    },
+    {
+      "id": "answer-wrong-definition",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "onboarding_answered",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "flow_id": "welcome",
+          "flow_version": "2",
+          "attempt_id": "10000000-0000-4000-8000-000000000020",
+          "step_id": "goal",
+          "question_id": "goal",
+          "answer_ids": ["habit"],
+          "answer_status": "answered",
+          "answer_revision": 1
+        },
+        "onboarding": {
+          "id": "welcome",
+          "version": "1",
+          "steps": ["goal"],
+          "questions": [
+            {
+              "id": "goal",
+              "stepId": "goal",
+              "title": "Your goal?",
+              "type": "single",
+              "options": [
+                {
+                  "id": "habit",
+                  "label": "Build a habit"
+                },
+                {
+                  "id": "focus",
+                  "label": "Focus"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "answer-unlisted-option",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "onboarding_answered",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "flow_id": "welcome",
+          "flow_version": "1",
+          "attempt_id": "10000000-0000-4000-8000-000000000020",
+          "step_id": "goal",
+          "question_id": "goal",
+          "answer_ids": ["missing"],
+          "answer_status": "answered",
+          "answer_revision": 1
+        },
+        "onboarding": {
+          "id": "welcome",
+          "version": "1",
+          "steps": ["goal"],
+          "questions": [
+            {
+              "id": "goal",
+              "stepId": "goal",
+              "title": "Your goal?",
+              "type": "single",
+              "options": [
+                {
+                  "id": "habit",
+                  "label": "Build a habit"
+                },
+                {
+                  "id": "focus",
+                  "label": "Focus"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "single-answer-multiple-selections",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "onboarding_answered",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "flow_id": "welcome",
+          "flow_version": "1",
+          "attempt_id": "10000000-0000-4000-8000-000000000020",
+          "step_id": "goal",
+          "question_id": "goal",
+          "answer_ids": ["habit", "focus"],
+          "answer_status": "answered",
+          "answer_revision": 1
+        },
+        "onboarding": {
+          "id": "welcome",
+          "version": "1",
+          "steps": ["goal"],
+          "questions": [
+            {
+              "id": "goal",
+              "stepId": "goal",
+              "title": "Your goal?",
+              "type": "single",
+              "options": [
+                {
+                  "id": "habit",
+                  "label": "Build a habit"
+                },
+                {
+                  "id": "focus",
+                  "label": "Focus"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "skip-with-selection",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "onboarding_answered",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "flow_id": "welcome",
+          "flow_version": "1",
+          "attempt_id": "10000000-0000-4000-8000-000000000020",
+          "step_id": "goal",
+          "question_id": "goal",
+          "answer_ids": ["habit"],
+          "answer_status": "skipped",
+          "answer_revision": 1
+        },
+        "onboarding": {
+          "id": "welcome",
+          "version": "1",
+          "steps": ["goal"],
+          "questions": [
+            {
+              "id": "goal",
+              "stepId": "goal",
+              "title": "Your goal?",
+              "type": "single",
+              "options": [
+                {
+                  "id": "habit",
+                  "label": "Build a habit"
+                },
+                {
+                  "id": "focus",
+                  "label": "Focus"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "skip-with-empty-array",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "onboarding_answered",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "flow_id": "welcome",
+          "flow_version": "1",
+          "attempt_id": "10000000-0000-4000-8000-000000000020",
+          "step_id": "goal",
+          "question_id": "goal",
+          "answer_ids": [],
+          "answer_status": "skipped",
+          "answer_revision": 1
+        },
+        "onboarding": {
+          "id": "welcome",
+          "version": "1",
+          "steps": ["goal"],
+          "questions": [
+            {
+              "id": "goal",
+              "stepId": "goal",
+              "title": "Your goal?",
+              "type": "single",
+              "options": [
+                {
+                  "id": "habit",
+                  "label": "Build a habit"
+                },
+                {
+                  "id": "focus",
+                  "label": "Focus"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "duplicate-step-ids",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "onboarding_answered",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "flow_id": "welcome",
+          "flow_version": "1",
+          "attempt_id": "10000000-0000-4000-8000-000000000020",
+          "step_id": "goal",
+          "question_id": "goal",
+          "answer_ids": ["habit"],
+          "answer_status": "answered",
+          "answer_revision": 1
+        },
+        "onboarding": {
+          "id": "welcome",
+          "version": "1",
+          "steps": ["goal", "goal"],
+          "questions": [
+            {
+              "id": "goal",
+              "stepId": "goal",
+              "title": "Your goal?",
+              "type": "single",
+              "options": [
+                {
+                  "id": "habit",
+                  "label": "Build a habit"
+                },
+                {
+                  "id": "focus",
+                  "label": "Focus"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "server-codepoint-string-over-limit",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "workout_completed",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "emoji": "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉"
+        }
+      }
+    }
+  ]
+}

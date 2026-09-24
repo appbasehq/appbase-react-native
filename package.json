@@ -1,0 +1,28 @@
+{
+  "name": "appbase-react-native-source",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.23.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm --filter @appbasehq/react-native build",
+    "typecheck": "pnpm --filter @mobile-analytics/contracts build && pnpm --filter @mobile-analytics/sdk-core build && pnpm -r --workspace-concurrency=1 typecheck",
+    "test": "pnpm --filter @mobile-analytics/sdk-core build && vitest run",
+    "check": "pnpm contract:check && pnpm build && pnpm typecheck && pnpm test",
+    "contract:generate": "node --import tsx scripts/generate-mobile-contract.ts",
+    "contract:check": "node --import tsx scripts/generate-mobile-contract.ts --check",
+    "sdk:conformance": "pnpm contract:check && pnpm --filter @mobile-analytics/sdk-core build && vitest run tests/sdk-conformance.test.ts tests/mobile-contract.test.ts",
+    "pack:sdk": "node scripts/pack-sdk.mjs",
+    "sdk:release": "pnpm pack:sdk"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "prettier": "3.9.6",
+    "tsx": "4.23.13",
+    "typescript": "~5.9.3",
+    "vitest": "5.0.1"
+  }
+}

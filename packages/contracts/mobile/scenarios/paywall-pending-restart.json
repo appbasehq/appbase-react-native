@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "id": "paywall-pending-restart",
+  "capability": "paywall",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "paywall.define",
+      "handle": "wall",
+      "id": "premium",
+      "version": 1
+    },
+    {
+      "op": "paywall.view",
+      "handle": "wall",
+      "view": "view",
+      "options": {
+        "placement": "settings",
+        "accessState": "inactive",
+        "productIds": ["premium.monthly"]
+      }
+    },
+    {
+      "op": "paywall.purchase",
+      "view": "view",
+      "purchase": "purchase",
+      "product": {
+        "productId": "premium.monthly"
+      }
+    },
+    {
+      "op": "paywall.result",
+      "purchase": "purchase",
+      "result": {
+        "result": "pending"
+      }
+    },
+    {
+      "op": "paywall.dismiss",
+      "view": "view",
+      "reason": "close_button"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "paywall.define",
+      "handle": "wall",
+      "id": "premium",
+      "version": 1
+    },
+    {
+      "op": "paywall.resumeView",
+      "handle": "wall",
+      "view": "view"
+    },
+    {
+      "op": "paywall.resumePurchase",
+      "view": "view",
+      "purchase": "purchase"
+    },
+    {
+      "op": "paywall.result",
+      "purchase": "purchase",
+      "result": {
+        "result": "succeeded",
+        "transactionId": "store-tx-1"
+      }
+    },
+    {
+      "op": "paywall.result",
+      "purchase": "purchase",
+      "result": {
+        "result": "succeeded",
+        "transactionId": "store-tx-1"
+      }
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:view-event",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "paywall_viewed",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "paywall_id": "premium",
+                "paywall_version": "1",
+                "paywall_view_id": "$uuid:view",
+                "placement": "settings",
+                "paywall_access_state": "inactive",
+                "product_ids": ["premium.monthly"]
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:purchase-event",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "paywall_purchase_started",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "paywall_id": "premium",
+                "paywall_version": "1",
+                "paywall_view_id": "$uuid:view",
+                "placement": "settings",
+                "paywall_access_state": "inactive",
+                "product_ids": ["premium.monthly"],
+                "product_id": "premium.monthly",
+                "purchase_attempt_id": "$uuid:purchase"
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:pending-event",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "paywall_purchase_result",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "paywall_id": "premium",
+                "paywall_version": "1",
+                "paywall_view_id": "$uuid:view",
+                "placement": "settings",
+                "paywall_access_state": "inactive",
+                "product_ids": ["premium.monthly"],
+                "product_id": "premium.monthly",
+                "purchase_attempt_id": "$uuid:purchase",
+                "result": "pending",
+                "result_source": "client"
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:dismiss-event",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "paywall_dismissed",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "paywall_id": "premium",
+                "paywall_version": "1",
+                "paywall_view_id": "$uuid:view",
+                "placement": "settings",
+                "paywall_access_state": "inactive",
+                "product_ids": ["premium.monthly"],
+                "dismiss_reason": "close_button"
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:success-event",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "paywall_purchase_result",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "paywall_id": "premium",
+                "paywall_version": "1",
+                "paywall_view_id": "$uuid:view",
+                "placement": "settings",
+                "paywall_access_state": "inactive",
+                "product_ids": ["premium.monthly"],
+                "product_id": "premium.monthly",
+                "purchase_attempt_id": "$uuid:purchase",
+                "result": "succeeded",
+                "result_source": "client",
+                "transaction_id": "store-tx-1"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": []
+  }
+}

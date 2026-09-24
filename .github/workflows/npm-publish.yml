@@ -1,0 +1,117 @@
+name: Review or publish npm candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Reviewed version with an immutable vVERSION tag at the current main commit'
+        required: true
+        type: string
+      sha256:
+        description: 'Expected SHA-256 of the reviewed npm archive'
+        required: true
+        type: string
+      mode:
+        description: 'Verify creates evidence only; publish also requires the npm environment approval'
+        required: true
+        default: verify
+        type: choice
+        options: [verify, publish]
+      dist_tag:
+        description: 'npm channel; next keeps the current latest release unchanged'
+        required: true
+        default: next
+        type: choice
+        options: [next, latest]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VERSION: ${{ inputs.version }}
+      EXPECTED_SHA256: ${{ inputs.sha256 }}
+      EXPECTED_SOURCE_SHA: ${{ github.sha }}
+    steps:
+      - name: Validate release inputs
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || exit 1
+          [[ "$EXPECTED_SHA256" =~ ^[a-f0-9]{64}$ ]] || exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: refs/tags/v${{ inputs.version }}
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86
+        with:
+          run_install: false
+      - run: npm install --global npm@11.19.0 --ignore-scripts
+      - name: Confirm tagged package identity
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const pkg = JSON.parse(readFileSync('sdks/react-native/package.json', 'utf8'));
+          assert.equal(pkg.name, '@appbasehq/react-native');
+          assert.equal(pkg.version, process.env.VERSION);
+          assert.equal(pkg.repository.url, 'git+https://github.com/appbasehq/appbase-react-native.git');
+          assert.equal(pkg.repository.directory, 'sdks/react-native');
+          JS
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm check
+      - run: pnpm pack:sdk
+      - name: Check exact reviewed archive
+        run: |
+          ARCHIVE="artifacts/appbasehq-react-native-$VERSION.tgz"
+          test -f "$ARCHIVE"
+          printf '%s  %s\n' "$EXPECTED_SHA256" "$ARCHIVE" | sha256sum --check --strict
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: reviewed-npm-candidate
+          path: artifacts/*.tgz
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    if: inputs.mode == 'publish'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      VERSION: ${{ inputs.version }}
+      EXPECTED_SHA256: ${{ inputs.sha256 }}
+      DIST_TAG: ${{ inputs.dist_tag }}
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm install --global npm@11.19.0 --ignore-scripts
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: reviewed-npm-candidate
+          path: artifacts
+      - name: Publish exact approved bytes with provenance
+        run: |
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]] || exit 1
+          [[ "$EXPECTED_SHA256" =~ ^[a-f0-9]{64}$ ]] || exit 1
+          [[ "$DIST_TAG" == next || "$DIST_TAG" == latest ]] || exit 1
+          ARCHIVE="artifacts/appbasehq-react-native-$VERSION.tgz"
+          printf '%s  %s\n' "$EXPECTED_SHA256" "$ARCHIVE" | sha256sum --check --strict
+          npm publish "$ARCHIVE" --access public --provenance --ignore-scripts --tag "$DIST_TAG"
