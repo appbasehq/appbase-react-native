@@ -7,6 +7,7 @@ import { revenuecatIdentityPropertiesSchema } from './revenuecat.js';
 import type { AnalyticsEvent } from './types.js';
 export type * from './types.js';
 export * from './revenuecat.js';
+export * from './reporting.js';
 export const trackingLabel = z
   .string()
   .trim()
@@ -291,10 +292,8 @@ export const dateRangeSchema = z
     to: z.iso.date(),
   })
   .refine(
-    (v) =>
-      Date.parse(v.to) > Date.parse(v.from) &&
-      Date.parse(v.to) - Date.parse(v.from) <= 90 * 86400000,
-    'Choose a range from 1 to 90 days; to is exclusive',
+    (v) => Date.parse(v.from) >= 0 && Date.parse(v.to) > Date.parse(v.from),
+    'Choose an ordered UTC date range from 1970 onward; to is exclusive',
   );
 
 export const journeyParamsSchema = z.object({

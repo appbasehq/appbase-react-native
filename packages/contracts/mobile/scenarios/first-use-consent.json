@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "id": "first-use-consent",
+  "capability": "first-use",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "setEnabled",
+      "enabled": false
+    },
+    {
+      "op": "markNewUser"
+    },
+    {
+      "op": "setEnabled",
+      "enabled": true
+    },
+    {
+      "op": "markNewUser"
+    },
+    {
+      "op": "flush"
+    },
+    {
+      "op": "setEnabled",
+      "enabled": false
+    },
+    {
+      "op": "setEnabled",
+      "enabled": true
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "markNewUser"
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:new",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_new_user",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": []
+  }
+}

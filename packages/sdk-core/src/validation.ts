@@ -226,6 +226,7 @@ export function validStoredState(value: unknown): boolean {
     !validUuid(value.installationId) ||
     !validUuid(value.anonymousId) ||
     typeof value.enabled !== 'boolean' ||
+    (value.newUserMarked !== undefined && typeof value.newUserMarked !== 'boolean') ||
     !Number.isSafeInteger(value.dropped) ||
     Number(value.dropped) < 0 ||
     (value.userId !== undefined &&

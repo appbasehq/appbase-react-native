@@ -20,7 +20,7 @@ pnpm check
 pnpm pack:sdk
 ```
 
-The check runs generated-schema drift validation, the SDK build, workspace typechecks and eight portable test files, including all 19 shared behavior scenarios. `pnpm sdk:conformance` runs only shared scenarios and canonical contract vectors. `pnpm pack:sdk` (also aliased as `pnpm sdk:release` for the SDK guide) creates a local candidate under ignored `artifacts/`; neither command publishes or changes customer installation metadata.
+The check runs generated-schema drift validation, the SDK build, workspace typechecks and eight portable test files, including all 23 shared behavior scenarios. `pnpm sdk:conformance` runs only shared scenarios and canonical contract vectors. `pnpm pack:sdk` (also aliased as `pnpm sdk:release` for the SDK guide) creates a local candidate under ignored `artifacts/`; neither command publishes or changes customer installation metadata.
 
 The portable suite uses controlled storage/network adapters. It does not prove real PostgreSQL acceptance, a React Native device runtime, lifecycle crash recovery, store purchases, Swift parity or deployment. Those release gates run in the canonical product repository. Shared contract documents discuss those broader upstream gates; only commands listed in this mirror's package.json are available here. The automatic source-check workflow checks Node 22 and 24 and never publishes. Workflow presence alone is not evidence of a completed hosted run.
 

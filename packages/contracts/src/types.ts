@@ -1,3 +1,4 @@
+import type { ReportGranularity } from './reporting.js';
 /** Flat values; bounded string lists support displayed product IDs. */
 export type Properties = Record<string, string | number | boolean | null | string[]>;
 export interface OnboardingQuestion {
@@ -126,6 +127,8 @@ export interface RetentionCohort {
   cells: RetentionCell[];
 }
 export interface AppHealthReport {
+  /** First app-reported acquisition signal; not a promise of complete coverage. */
+  new_user_since: string | null;
   activity_as_of: string | null;
   activity: AppHealthPoint[];
   retention: {
@@ -260,7 +263,7 @@ export interface ObservedUser {
   platforms: string[];
 }
 export interface DashboardStats {
-  granularity: 'daily' | 'weekly';
+  granularity: ReportGranularity;
   series: TrendPoint[];
   first_opens: number;
   platforms: { label: string; users: number }[];
@@ -278,7 +281,7 @@ export interface FeatureUsage {
   name: string;
   users: number;
   occurrences: number;
-  /** Sparse daily/weekly buckets. Empty elapsed buckets have zero users/occurrences. */
+  /** Sparse reporting buckets. Empty elapsed buckets have zero users/occurrences. */
   series: FeaturePoint[];
 }
 export interface FeatureUsageReport {
@@ -344,6 +347,12 @@ export interface AcquisitionProduct {
 }
 export interface AcquisitionReport {
   status: 'unconnected' | 'observed' | 'limited';
+  /** Lifetime evidence for this app/environment; independent of the selected range. */
+  tracking_status?:
+    'awaiting_first_open' | 'awaiting_new_user' | 'awaiting_identity_link' | 'ready';
+  /** Counts are app-reported acquisition, never inferred from SDK installation. */
+  new_user_since: string | null;
+  first_seen_users: number;
   as_of: string;
   tracking_since: string | null;
   history_complete: false;
@@ -358,6 +367,7 @@ export interface AcquisitionReport {
     invalid_receipts: number;
     excluded_subjects: number;
     missing_first_open: number;
+    missing_first_use: number;
     missing_history: number;
     unknown_amount: number;
     overdue_trials: number;

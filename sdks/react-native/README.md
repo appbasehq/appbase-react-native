@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.2.1**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.3.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.2.1
+npm install @appbasehq/react-native@0.3.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -253,3 +253,15 @@ Use `await analytics.feedback({ message, email? })` for explicit contact. Unlike
 An optional `FeedbackSheet` is exported from `@appbasehq/react-native/ui`; mount it with `analytics`, `visible`, and `onClose` props. It includes the form, validation, acknowledged success and retry handling. It uses your app’s React/React Native; importing the core SDK does not load it.
 
 Explicit contact works while tracking is disabled; in that case analytics identity is omitted. Feedback is stored separately and never counted as feature usage or app activity. See [the complete feedback guide](https://appbase.so/docs/feedback.md) for installation, examples, delivery semantics and the dashboard inbox.
+
+## App-reported first use
+
+`markNewUser()` is available starting with React Native 0.3.0 and Swift 0.2.0. Upgrade deliberately before using this method.
+
+```
+await analytics.markNewUser();
+```
+
+Call only in the host app's genuinely first-time entry path, before onboarding completion. The app/agent owns that decision; Appbase makes no RevenueCat or auth lookup. Automatic `app_first_open` remains first seen, including existing users receiving the SDK for the first time. Onboarding visibility, replays, updates, reinstall and absence of a subscription do not prove newness. Without reliable evidence, omit the signal.
+
+The helper atomically queues `app_new_user` and remembers it for the current anonymous identity across restarts and identify. Reset clears the flag but never marks anyone automatically; linked accounts deduplicate in reports. True means locally recorded/already recorded; false means not recorded. Queue/storage failures allow retry in the same genuine first-time context. Opt-out drops queued events without manufacturing a new signal when enabled again. The timestamp is actual call time, never historical backfill. See [the integration guide](https://appbase.so/docs/first-use.md) for placement, report semantics and acceptance cases.

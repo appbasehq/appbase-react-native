@@ -154,6 +154,9 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
           case 'track':
             await sdk.track(action.name, action.properties);
             break;
+          case 'markNewUser':
+            await sdk.markNewUser();
+            break;
           case 'identify':
             await sdk.identify(action.userId);
             break;
