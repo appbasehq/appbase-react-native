@@ -16,13 +16,13 @@ Scope durable state by app and environment, never by SDK API object lifetime. Na
 
 Record `app_first_open` once when establishing durable installation state. Preserve installation identity through logout/reset. Native adapters record `app_active` on active cold launch and foreground transitions and own any bounded background flush. Do not infer additional opens from helper calls. Controlled shared scenarios disable automatic lifecycle and periodic timers; native lifecycle checks are a separate requirement.
 
-## App-reported first use
+## Configured acquisition
 
-`markNewUser()` records `app_new_user` with empty properties when the host app knows the current identity is genuinely using the product for the first time. It is optional and independent of RevenueCat, login and onboarding. Call at genuine entry, not completion; do not call on SDK initialization, every onboarding presentation, returning login, replay, reinstall or app update. If the app cannot distinguish a new person from a returning person, omit the signal. Signup-only placement measures new signups, not all new app users.
+Acquisition is a server-side app/environment definition: one stored SDK event name plus exact scalar property filters. The earliest lifetime match per resolved identity defines its SDK cohort. SDKs expose no dedicated acquisition helper or local marker flag. Use existing events or ordinary `track`; normal queue, consent, occurrence time and identity rules apply.
 
-The event uses call time and current identity, never an invented earlier timestamp. The helper atomically persists the event and an optional `newUserMarked` flag. Repeated calls, identify on the same anonymous identity and process restart do not emit it again. Reset clears the flag for the new anonymous identity but never emits a new signal automatically. Reports deduplicate by resolved identity; anonymous reinstall identity cannot be deduplicated without account linkage. Opt-out/disposal does not capture; opt-out clears the queue but keeps a previously recorded flag, so re-enabling does not invent historical acquisition. Queue rejection/storage failure must not set the flag; callers may retry while the same genuine first-time context is still valid. Both SDKs return true for locally recorded/already recorded and false when not recorded; neither waits for network delivery.
+The removed helper's optional stored `newUserMarked` property is ignored. Old durable state, identities and queued `app_new_user` events must survive an upgrade without an extra first open. Shared `legacy-marker-upgrade` exercises identical offline delivery before/after restart with the old flag and payload. Historical wire schema v1 remains accepted; those old event names have no special reporting meaning unless selected explicitly.
 
-`app_first_open` retains its historical wire meaning: first observation of durable SDK installation state. It is not upgraded to true acquisition. An absent `app_new_user` means acquisition is unknown, not existing. This addition keeps schema-v1 events and old stored states compatible.
+Automatic `app_first_open` still means first observation of SDK installation state. Selecting it for acquisition is an explicit owner/setup choice. Unconfigured acquisition stays unknown. See [new-user definitions](https://appbase.so/docs/first-use.md).
 
 ## Durable delivery and errors
 

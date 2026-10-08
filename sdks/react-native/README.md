@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.3.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+The source targets **0.4.0** (release candidate). The install example below remains the verified published version **0.3.0** until the new release is published. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -210,6 +210,8 @@ Generic `track(name, properties)` remains available. Properties support strings,
 
 ## RevenueCat identity link (optional)
 
+Optional for general analytics, required to connect RevenueCat billing to app activity. Use it for existing subscribers as well as new customers. You can deliver this link before or after a history import: reports match the stored records after both are available. Do not gate it on purchase or import completion, and do not mark an existing customer new merely because the SDK first sees them. See [existing apps and import order](https://appbase.so/docs/revenuecat-setup.md#existing-apps-link-users-before-or-after-importing).
+
 The app owns its RevenueCat installation and authentication. Our SDK has no RevenueCat dependency. After your existing Purchases configuration completes, record its current ID:
 
 ```ts
@@ -254,14 +256,10 @@ An optional `FeedbackSheet` is exported from `@appbasehq/react-native/ui`; mount
 
 Explicit contact works while tracking is disabled; in that case analytics identity is omitted. Feedback is stored separately and never counted as feature usage or app activity. See [the complete feedback guide](https://appbase.so/docs/feedback.md) for installation, examples, delivery semantics and the dashboard inbox.
 
-## App-reported first use
+## Configure new users
 
-`markNewUser()` is available starting with React Native 0.3.0 and Swift 0.2.0. Upgrade deliberately before using this method.
+**Required for SDK acquisition and retention:** in App setup, choose one new-user event and optional exact property filters for each environment. Agents can read, preview and save it using app-scoped setup access. Use the [definition guide](https://appbase.so/docs/first-use.md) for the API, selection examples and acceptance checklist.
 
-```
-await analytics.markNewUser();
-```
+No dedicated SDK marker call is needed. Reuse an existing event such as `onboarding_started` with `flow_id`, or track an ordinary entry event. The server counts each resolved identity once, at its earliest matching occurrence across recorded history. A brand-new app can explicitly select automatic `app_first_open`; existing apps must audit returning-user and upgrade paths before choosing it. Completion/purchase events exclude people who dropped out earlier.
 
-Call only in the host app's genuinely first-time entry path, before onboarding completion. The app/agent owns that decision; Appbase makes no RevenueCat or auth lookup. Automatic `app_first_open` remains first seen, including existing users receiving the SDK for the first time. Onboarding visibility, replays, updates, reinstall and absence of a subscription do not prove newness. Without reliable evidence, omit the signal.
-
-The helper atomically queues `app_new_user` and remembers it for the current anonymous identity across restarts and identify. Reset clears the flag but never marks anyone automatically; linked accounts deduplicate in reports. True means locally recorded/already recorded; false means not recorded. Queue/storage failures allow retry in the same genuine first-time context. Opt-out drops queued events without manufacturing a new signal when enabled again. The timestamp is actual call time, never historical backfill. See [the integration guide](https://appbase.so/docs/first-use.md) for placement, report semantics and acceptance cases.
+The next SDK release removes `markNewUser()`. Remove calls when upgrading. Existing identities and queued schema-v1 events survive; keep the collection configuration and storage namespace. Older installed SDKs' `app_new_user` events are accepted as ordinary events but have no special acquisition meaning. Published versions listed above remain usable with server-side definitions without upgrading.

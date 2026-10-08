@@ -1,4 +1,5 @@
-import type { ReportGranularity } from './reporting.js';
+import type { AcquisitionConfiguration } from './acquisition.js';
+import type { ReportGranularity, ReportView } from './reporting.js';
 /** Flat values; bounded string lists support displayed product IDs. */
 export type Properties = Record<string, string | number | boolean | null | string[]>;
 export interface OnboardingQuestion {
@@ -100,6 +101,31 @@ export interface Report {
   revenue: RevenueReport;
 }
 
+/** A selected report omits unrelated fields; omission never means measured zero. */
+type ReportViewFields = {
+  'new-business': Pick<Report, 'acquisition'>;
+  revenue: Pick<Report, 'revenue'>;
+  subscriptions: Pick<Report, 'revenue'>;
+  onboarding: Pick<
+    Report,
+    'onboarding' | 'onboarding_answers' | 'flows' | 'flow' | 'paywall_journeys'
+  >;
+  paywalls: Pick<Report, 'paywall_journeys'>;
+  'app-health': Pick<Report, 'app_health'>;
+  features: { dashboard: Pick<DashboardStats, 'features'> };
+  audience: {
+    dashboard: Pick<DashboardStats, 'platforms' | 'versions' | 'total_users' | 'countries'>;
+  };
+  users: Pick<Report, 'recent'> & { dashboard: Pick<DashboardStats, 'users' | 'total_users'> };
+  acquisition: Record<never, never>;
+};
+export type ReportViewResult<V extends ReportView = ReportView> = {
+  [K in V]: Pick<Report, 'app' | 'from' | 'to' | 'generated_at'> & {
+    view: K;
+    dashboard: Pick<DashboardStats, 'granularity'>;
+  } & ReportViewFields[K];
+}[V];
+
 export type ActivityWindow = 'dau' | 'wau' | 'mau';
 export interface ActiveUsers {
   active: number;
@@ -127,7 +153,8 @@ export interface RetentionCohort {
   cells: RetentionCell[];
 }
 export interface AppHealthReport {
-  /** First app-reported acquisition signal; not a promise of complete coverage. */
+  new_user_definition: AcquisitionConfiguration;
+  /** First matching configured event; not a promise of complete coverage. */
   new_user_since: string | null;
   activity_as_of: string | null;
   activity: AppHealthPoint[];
@@ -183,13 +210,26 @@ export interface PaywallSlice {
   totals: PaywallMetrics;
   placements: PaywallPlacement[];
 }
+/** Exclusive routes: each viewer's earliest verified start in the selected view cohort.
+ * Ties use presentation time, trial before direct, then stable presentation ID. */
+export interface PaywallStartBreakdown {
+  trials: number | null;
+  direct: number | null;
+}
+export interface PaywallStartPoint extends PaywallStartBreakdown {
+  date: string;
+  starts: number | null;
+}
 export interface PaywallComparisonPlacement extends Omit<
   PaywallPlacement,
   'onboarding_attempts' | 'first_attempts' | 'additional_attempts' | 'onboarding_conversions'
 > {
   context: 'onboarding' | 'in_app';
+  starts_by_type: PaywallStartBreakdown;
 }
 export interface PaywallComparisonSlice extends Omit<PaywallSlice, 'placements'> {
+  starts_by_type: PaywallStartBreakdown;
+  series: PaywallStartPoint[];
   placements: PaywallComparisonPlacement[];
 }
 export interface OnboardingFunnelStage {
@@ -204,6 +244,7 @@ export interface OnboardingPaywallFunnel {
   excluded_attempts: number;
 }
 export interface PaywallJourneys {
+  granularity: ReportGranularity;
   status: 'observed' | 'limited';
   attribution: 'unconnected' | 'observed' | 'limited';
   billing: {
@@ -256,6 +297,8 @@ export interface TrendPoint {
 }
 export interface ObservedUser {
   subject: string;
+  /** Latest safely linked RevenueCat profile country, not event-time location. */
+  country_code: string | null;
   events: number;
   activities: number;
   first_in_period: string;
@@ -271,6 +314,21 @@ export interface DashboardStats {
   features: FeatureUsageReport;
   users: ObservedUser[];
   total_users: number;
+  countries: AudienceCountries;
+}
+export interface CountryPopulation {
+  status: 'observed' | 'unconnected' | 'limited';
+  total: number | null;
+  known: number | null;
+  unknown: number | null;
+  rows: { country_code: string; users: number }[];
+}
+export interface AudienceCountries {
+  observed: CountryPopulation;
+  paying: CountryPopulation;
+  profiles_updated_at: string | null;
+  /** Verified payments without one stable provider customer ID cannot be counted as people. */
+  unidentified_payments: number;
 }
 export interface FeaturePoint {
   date: string;
@@ -319,6 +377,7 @@ export interface FeaturePropertiesReport {
 }
 export interface Journey {
   subject: string;
+  country_code: string | null;
   from: string;
   to: string;
   events: StoredEvent[];
@@ -326,6 +385,8 @@ export interface Journey {
 }
 
 export interface AcquisitionPoint {
+  /** False means no acquisition coverage in this bucket. */
+  acquisition_available?: boolean;
   date: string;
   new_users: number;
   direct_paid: number | null;
@@ -346,11 +407,17 @@ export interface AcquisitionProduct {
   first_purchase_cents: number | null;
 }
 export interface AcquisitionReport {
+  new_user_definition: AcquisitionConfiguration;
+  historical_imports?: {
+    imports: number;
+    first_use_records: number;
+    partial_range: boolean;
+    ranges: { from: string; to: string }[];
+  };
   status: 'unconnected' | 'observed' | 'limited';
   /** Lifetime evidence for this app/environment; independent of the selected range. */
-  tracking_status?:
-    'awaiting_first_open' | 'awaiting_new_user' | 'awaiting_identity_link' | 'ready';
-  /** Counts are app-reported acquisition, never inferred from SDK installation. */
+  tracking_status?: 'unconfigured' | 'awaiting_event' | 'awaiting_identity_link' | 'ready';
+  /** Earliest matching configured event or published acquisition-coverage start, never SDK installation. */
   new_user_since: string | null;
   first_seen_users: number;
   as_of: string;
@@ -416,7 +483,7 @@ export interface RevenueReport {
   history_complete: false;
   subscription_status: 'sync_required' | 'synced' | 'stale';
   subscription_as_of: string | null;
-  subscription_basis: 'period_end' | 'latest_sync';
+  subscription_basis: 'period_end' | 'latest_sync' | 'live';
   subscription_history_incomplete: boolean;
   subscription_series: SubscriptionPoint[];
   recurring_metrics_status: 'unconnected' | 'sandbox_unavailable' | 'sync_required';

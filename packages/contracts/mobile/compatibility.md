@@ -26,6 +26,6 @@ For a client-facing change:
 
 Never weaken validation to make a failing scenario pass without reviewing its intended behavior. Never remove historical payload compatibility just because the latest SDK changed. Breaking behavior requires an explicit migration/deprecation policy and a new contract boundary where appropriate. Server-only report changes usually need neither SDK release; platform fixes still run shared conformance to detect regressions.
 
-## Explicit first-use addition
+## Acquisition migration
 
-React Native 0.3.0 and Swift 0.2.0 introduce `markNewUser()` with four shared scenarios: idempotence across identify/reset/restart, storage rollback, queue rejection/retry, and consent. Older React Native 0.2.1 and Swift 0.1.0 do not expose this method. Check the published release manifests before installing a release candidate. The event remains schema v1; automatic first-open payloads and old durable state remain compatible. See [behavior](behavior.md#app-reported-first-use).
+React Native 0.3.0 and Swift 0.2.0 shipped the former `markNewUser()` helper. The next SDK release removes that source API and local deduplication behavior by explicit migration. Acquisition now uses a saved server-side event definition. Remove helper calls when upgrading; reuse existing tracking. No collection wire version, storage namespace or identity change is required. Old states and queued marker events remain readable; `legacy-marker-upgrade` verifies both runners. The obsolete helper-only scenarios are removed; generic delivery/consent/storage scenarios remain. Published archives and tags stay immutable. Check release manifests for availability, and see [configured acquisition](behavior.md#configured-acquisition).

@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./screenshots": {
+      "types": "./dist/screenshots.d.ts",
+      "default": "./dist/screenshots.js"
+    },
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"

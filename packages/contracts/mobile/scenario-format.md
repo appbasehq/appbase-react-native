@@ -13,6 +13,7 @@ Compare `expect.status` to the public `queued`, `dropped`, `enabled`, `blocked` 
 | `identify`                                                      | `userId`                                                                                                                               |
 | `reset`, `flush`, `resume`                                      | No arguments                                                                                                                           |
 | `setEnabled`                                                    | `enabled` boolean                                                                                                                      |
+| `storage.patch`                                                 | `fields`: merge legacy JSON fields into durable fixture storage, without changing live state                                           |
 | `restart`                                                       | Dispose/recreate same durable store, keep captured requests and semantic handle IDs; clear actual helper objects                       |
 | `storage.failNext`                                              | Fail the next durable save before changing stored bytes                                                                                |
 | `network`                                                       | Append exactly one `response` to the fake transport's FIFO                                                                             |

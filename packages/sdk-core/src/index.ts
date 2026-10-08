@@ -137,7 +137,6 @@ interface State {
   anonymousId: string;
   userId?: string;
   enabled: boolean;
-  newUserMarked?: boolean;
   events: AnalyticsEvent[];
   dropped: number;
   onboarding?: Record<
@@ -397,27 +396,6 @@ export class Analytics {
       if (this.state.events.length >= this.batchSize) void this.flush();
     } catch {
       this.diagnose({ code: 'storage', message: 'Could not persist event' });
-    }
-  }
-  /** Call only when the host app knows this is a genuine first-time user.
-   * True means recorded locally (or already recorded), not delivered. No provider lookup.
-   */
-  async markNewUser(): Promise<boolean> {
-    if (this.disposed) return false;
-    try {
-      const occurredAt = this.clock().toISOString();
-      const recorded = await this.update(() => {
-        if (!this.state.enabled) return false;
-        if (this.state.newUserMarked) return true;
-        if (!this.enqueue(this.event('app_new_user', {}, occurredAt))) return false;
-        this.state.newUserMarked = true;
-        return true;
-      }, true);
-      if (this.state.events.length >= this.batchSize) void this.flush();
-      return recorded;
-    } catch {
-      this.diagnose({ code: 'storage', message: 'Could not persist first-use signal' });
-      return false;
     }
   }
   /** Explicit user contact. Resolves only after server storage, independently of analytics consent. */
@@ -806,7 +784,6 @@ export class Analytics {
       this.identityRevision++;
       delete this.state.revenuecatIdentity;
       this.state.anonymousId = anonymousId;
-      delete this.state.newUserMarked;
       delete this.state.userId;
       this.state.onboarding = {};
       this.state.paywalls = {};

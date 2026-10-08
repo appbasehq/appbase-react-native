@@ -8,6 +8,8 @@ import type { AnalyticsEvent } from './types.js';
 export type * from './types.js';
 export * from './revenuecat.js';
 export * from './reporting.js';
+export * from './agent-analytics.js';
+export * from './acquisition.js';
 export const trackingLabel = z
   .string()
   .trim()

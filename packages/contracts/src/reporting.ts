@@ -1,6 +1,20 @@
 /** UTC reporting intervals. `end` is exclusive; calendar buckets are clipped to the range. */
 export const reportGranularities = ['daily', 'weekly', 'monthly', 'yearly'] as const;
 export type ReportGranularity = (typeof reportGranularities)[number];
+/** Optional HTTP report selection. Omission retains the complete legacy report. */
+export const reportViews = [
+  'new-business',
+  'revenue',
+  'subscriptions',
+  'onboarding',
+  'paywalls',
+  'app-health',
+  'features',
+  'audience',
+  'users',
+  'acquisition',
+] as const;
+export type ReportView = (typeof reportViews)[number];
 export interface ReportBucket {
   date: string;
   end: string;

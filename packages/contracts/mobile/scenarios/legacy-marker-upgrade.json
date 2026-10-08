@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "first-use-idempotence",
-  "capability": "first-use",
+  "id": "legacy-marker-upgrade",
+  "capability": "storage compatibility",
   "config": {
     "now": "2026-09-01T12:00:00.000Z",
     "platform": "ios",
@@ -9,39 +9,31 @@
   },
   "actions": [
     {
-      "op": "markNewUser"
+      "op": "track",
+      "name": "app_new_user",
+      "properties": {}
     },
     {
-      "op": "markNewUser"
+      "op": "storage.patch",
+      "fields": {
+        "newUserMarked": true
+      }
     },
     {
-      "op": "identify",
-      "userId": "account"
-    },
-    {
-      "op": "restart"
-    },
-    {
-      "op": "markNewUser"
+      "op": "network",
+      "response": {
+        "kind": "offline"
+      }
     },
     {
       "op": "flush"
     },
     {
-      "op": "restart"
-    },
-    {
-      "op": "markNewUser"
-    },
-    {
-      "op": "reset"
-    },
-    {
       "op": "clock.set",
-      "now": "2026-09-02T12:00:00.000Z"
+      "now": "2026-09-01T13:00:00.000Z"
     },
     {
-      "op": "markNewUser"
+      "op": "restart"
     },
     {
       "op": "flush"
@@ -66,7 +58,7 @@
             },
             {
               "schema_version": 1,
-              "event_id": "$uuid:new",
+              "event_id": "$uuid:workout",
               "installation_id": "$uuid:installation",
               "anonymous_id": "$uuid:anonymous",
               "name": "app_new_user",
@@ -74,18 +66,6 @@
               "platform": "ios",
               "app_version": "1.0.0",
               "properties": {}
-            },
-            {
-              "schema_version": 1,
-              "event_id": "$uuid:link",
-              "installation_id": "$uuid:installation",
-              "anonymous_id": "$uuid:anonymous",
-              "name": "identity_linked",
-              "occurred_at": "2026-09-01T12:00:00.000Z",
-              "platform": "ios",
-              "app_version": "1.0.0",
-              "properties": {},
-              "user_id": "account"
             }
           ]
         }
@@ -96,11 +76,22 @@
           "events": [
             {
               "schema_version": 1,
-              "event_id": "$uuid:next",
+              "event_id": "$uuid:first",
               "installation_id": "$uuid:installation",
-              "anonymous_id": "$uuid:second",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:workout",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
               "name": "app_new_user",
-              "occurred_at": "2026-09-02T12:00:00.000Z",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
               "platform": "ios",
               "app_version": "1.0.0",
               "properties": {}
@@ -115,6 +106,8 @@
       "enabled": true,
       "blocked": false
     },
-    "diagnostics": []
+    "diagnostics": [
+      "network"
+    ]
   }
 }
