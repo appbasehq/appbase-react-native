@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-The source targets **0.4.0** (release candidate). The install example below remains the verified published version **0.3.0** until the new release is published. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.4.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.3.0
+npm install @appbasehq/react-native@0.4.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -262,4 +262,4 @@ Explicit contact works while tracking is disabled; in that case analytics identi
 
 No dedicated SDK marker call is needed. Reuse an existing event such as `onboarding_started` with `flow_id`, or track an ordinary entry event. The server counts each resolved identity once, at its earliest matching occurrence across recorded history. A brand-new app can explicitly select automatic `app_first_open`; existing apps must audit returning-user and upgrade paths before choosing it. Completion/purchase events exclude people who dropped out earlier.
 
-The next SDK release removes `markNewUser()`. Remove calls when upgrading. Existing identities and queued schema-v1 events survive; keep the collection configuration and storage namespace. Older installed SDKs' `app_new_user` events are accepted as ordinary events but have no special acquisition meaning. Published versions listed above remain usable with server-side definitions without upgrading.
+Version 0.4.0 removes `markNewUser()`. Remove calls when upgrading. Existing identities and queued schema-v1 events survive; keep the collection configuration and storage namespace. Older installed SDKs' `app_new_user` events are accepted as ordinary events but have no special acquisition meaning. Older published SDKs also work with server-side definitions without upgrading.
