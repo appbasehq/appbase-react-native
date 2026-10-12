@@ -27,6 +27,10 @@
     },
     "platform": { "type": "string", "enum": ["ios", "android", "test"] },
     "app_version": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "runtime_environment": {
+      "type": "string",
+      "enum": ["production", "sandbox", "development", "unknown"]
+    },
     "properties": {
       "type": "object",
       "propertyNames": { "type": "string", "minLength": 1, "maxLength": 80 },

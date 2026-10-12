@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "id": "runtime-environment-legacy-upgrade",
+  "capability": "capture-time native environment and immutable replay",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "track",
+      "name": "training_started",
+      "properties": {}
+    },
+    {
+      "op": "network",
+      "response": {
+        "kind": "offline"
+      }
+    },
+    {
+      "op": "flush"
+    },
+    {
+      "op": "restart",
+      "runtimeEnvironment": "sandbox"
+    },
+    {
+      "op": "track",
+      "name": "training_terminated",
+      "properties": {}
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:before",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "training_started",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      },
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:before",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "training_started",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:after",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "training_terminated",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {},
+              "runtime_environment": "sandbox"
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": ["network"]
+  }
+}

@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.4.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.5.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.4.0
+npm install @appbasehq/react-native@0.5.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -52,6 +52,10 @@ export const analyticsReady = createReactNativeAnalytics({
 ```
 
 Bare React Native can use the same storage/network adapters and any secure UUID generator supported by that app. Initialization is asynchronous; handle initialization/storage failures in app startup without blocking the user from using the app. Production API URLs require HTTPS. On a physical phone, localhost points to the phone; use the hosted API or an explicitly configured local development endpoint.
+
+## Native runtime environment
+
+Pass `runtimeEnvironment` (`production`, `sandbox`, `development`, or `unknown`) from a bounded native host adapter before creating the client. This field labels new events and does not switch collection keys or reset identity. On iOS use verified `AppTransaction.shared.environment`: App Store is production; TestFlight and App Review are sandbox; Xcode StoreKit Testing, simulators and development signing are development. Missing, unverified or unavailable detection stays unknown. The JavaScript SDK cannot inspect Apple's signed app transaction by itself. Do not infer the field from a Production collection key or a purchase callback, and never request receipt refresh, authentication or permissions for analytics. Older queued events retain their original metadata, including an absent field.
 
 ## Automatic app opens
 
@@ -262,4 +266,4 @@ Explicit contact works while tracking is disabled; in that case analytics identi
 
 No dedicated SDK marker call is needed. Reuse an existing event such as `onboarding_started` with `flow_id`, or track an ordinary entry event. The server counts each resolved identity once, at its earliest matching occurrence across recorded history. A brand-new app can explicitly select automatic `app_first_open`; existing apps must audit returning-user and upgrade paths before choosing it. Completion/purchase events exclude people who dropped out earlier.
 
-Version 0.4.0 removes `markNewUser()`. Remove calls when upgrading. Existing identities and queued schema-v1 events survive; keep the collection configuration and storage namespace. Older installed SDKs' `app_new_user` events are accepted as ordinary events but have no special acquisition meaning. Older published SDKs also work with server-side definitions without upgrading.
+Version 0.5.0 removes `markNewUser()`. Remove calls when upgrading. Existing identities and queued schema-v1 events survive; keep the collection configuration and storage namespace. Older installed SDKs' `app_new_user` events are accepted as ordinary events but have no special acquisition meaning. Older published SDKs also work with server-side definitions without upgrading.

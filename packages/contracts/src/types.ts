@@ -27,6 +27,8 @@ export interface OnboardingAnswers {
   status: 'observed' | 'limited';
   questions: OnboardingAnswerSummary[];
 }
+export type RuntimeEnvironment = 'production' | 'sandbox' | 'development' | 'unknown';
+export type RuntimeEnvironmentFilter = RuntimeEnvironment | 'all';
 export interface AnalyticsEvent {
   schema_version: 1;
   event_id: string;
@@ -37,6 +39,8 @@ export interface AnalyticsEvent {
   occurred_at: string;
   platform: 'ios' | 'android' | 'test';
   app_version: string;
+  /** Native distribution signal at capture; absent on legacy clients. Separate from collection-key scope. */
+  runtime_environment?: RuntimeEnvironment;
   properties: Properties;
   onboarding?: OnboardingDefinition;
 }
@@ -304,6 +308,7 @@ export interface ObservedUser {
   first_in_period: string;
   last_seen: string;
   platforms: string[];
+  runtime_environments?: RuntimeEnvironment[];
 }
 export interface DashboardStats {
   granularity: ReportGranularity;
@@ -393,6 +398,8 @@ export interface AcquisitionPoint {
   trial_paid: number | null;
   trial_pending: number | null;
   trial_ended: number | null;
+  /** Verified trial start with an uncertain later outcome. */
+  trial_unknown: number | null;
   first_purchase_cents: number | null;
 }
 export interface AcquisitionProduct {
@@ -404,6 +411,7 @@ export interface AcquisitionProduct {
   trial_paid: number;
   trial_pending: number;
   trial_ended: number;
+  trial_unknown: number;
   first_purchase_cents: number | null;
 }
 export interface AcquisitionReport {

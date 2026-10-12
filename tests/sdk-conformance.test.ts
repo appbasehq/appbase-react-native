@@ -25,6 +25,7 @@ interface Scenario {
     now: string;
     platform: 'ios';
     appVersion: string;
+    runtimeEnvironment?: AnalyticsOptions['runtimeEnvironment'];
     maxQueueSize?: number;
     batchSize?: number;
   };
@@ -128,6 +129,7 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
       apiUrl: 'https://conformance.invalid',
       platform: scenario.config.platform,
       appVersion: scenario.config.appVersion,
+      runtimeEnvironment: scenario.config.runtimeEnvironment,
       storage: {
         getItem: async (key) => store.get(key) ?? null,
         setItem: async (key, value) => {
@@ -184,6 +186,8 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
             break;
           case 'restart':
             await sdk.dispose();
+            if (action.runtimeEnvironment !== undefined)
+              options.runtimeEnvironment = action.runtimeEnvironment;
             sdk = await createReactNativeAnalytics(options);
             flows.clear();
             walls.clear();

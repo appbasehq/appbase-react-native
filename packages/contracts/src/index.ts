@@ -10,6 +10,7 @@ export * from './revenuecat.js';
 export * from './reporting.js';
 export * from './agent-analytics.js';
 export * from './acquisition.js';
+export * from './period-overview.js';
 export const trackingLabel = z
   .string()
   .trim()
@@ -153,6 +154,8 @@ const paywallActions = [
   'paywall_purchase_result',
   'paywall_dismissed',
 ];
+export const runtimeEnvironmentSchema = z.enum(['production', 'sandbox', 'development', 'unknown']);
+export const runtimeEnvironmentFilterSchema = z.union([z.literal('all'), runtimeEnvironmentSchema]);
 export const eventSchema = z
   .object({
     schema_version: z.literal(1),
@@ -164,6 +167,7 @@ export const eventSchema = z
     occurred_at: z.iso.datetime({ offset: true }),
     platform: z.enum(['ios', 'android', 'test']),
     app_version: z.string().min(1).max(limits.appVersionLength),
+    runtime_environment: runtimeEnvironmentSchema.optional(),
     properties: z
       .record(z.string().min(1).max(limits.propertyKeyLength), property)
       .refine((p) => Object.keys(p).length <= limits.propertyCount, 'Too many properties')

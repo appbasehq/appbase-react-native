@@ -16,6 +16,12 @@ Scope durable state by app and environment, never by SDK API object lifetime. Na
 
 Record `app_first_open` once when establishing durable installation state. Preserve installation identity through logout/reset. Native adapters record `app_active` on active cold launch and foreground transitions and own any bounded background flush. Do not infer additional opens from helper calls. Controlled shared scenarios disable automatic lifecycle and periodic timers; native lifecycle checks are a separate requirement.
 
+## Native runtime environment
+
+`runtime_environment` optionally records `production`, `sandbox`, `development` or `unknown` on each event at capture. It is independent of the collection key's Development/Production dataset and never changes storage scope or identity. Hosts detect the signal before creating a client. Apple's verified `AppTransaction.shared.environment` distinguishes App Store from Sandbox and StoreKit Testing; simulators and development signing are Development. TestFlight and App Review share Sandbox; this is not reviewer identification. Missing/unverified/unavailable detection stays Unknown. Do not call receipt/app-transaction refresh or request permissions for analytics. Detection must be bounded and must not block app UI.
+
+Legacy payloads may omit the field. Preserve their exact immutable queued payloads through upgrades/retries; do not backfill from the current runtime, app version, collection key or billing outcome. Journey filters apply to event-time metadata before pagination; one identity may have events in multiple environments. Client environment metadata is not purchase verification or a security boundary.
+
 ## Configured acquisition
 
 Acquisition is a server-side app/environment definition: one stored SDK event name plus exact scalar property filters. The earliest lifetime match per resolved identity defines its SDK cohort. SDKs expose no dedicated acquisition helper or local marker flag. Use existing events or ordinary `track`; normal queue, consent, occurrence time and identity rules apply.

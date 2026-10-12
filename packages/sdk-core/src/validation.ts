@@ -250,6 +250,8 @@ export function validStoredState(value: unknown): boolean {
       !oneOf(event.platform, ['ios', 'android', 'test']) ||
       typeof event.app_version !== 'string' ||
       !event.app_version ||
+      (event.runtime_environment !== undefined &&
+        !oneOf(event.runtime_environment, ['production', 'sandbox', 'development', 'unknown'])) ||
       event.app_version.length > MOBILE_LIMITS.appVersionLength ||
       (event.user_id !== undefined &&
         (typeof event.user_id !== 'string' ||

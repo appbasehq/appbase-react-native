@@ -29,12 +29,14 @@ export type {
   PurchaseResult,
 } from './paywall.js';
 import type {
+  RuntimeEnvironment,
   AnalyticsEvent,
   BatchResult,
   Properties,
   OnboardingDefinition,
 } from '@mobile-analytics/contracts/types';
 export type {
+  RuntimeEnvironment,
   AnalyticsEvent,
   Properties,
   OnboardingDefinition,
@@ -118,6 +120,8 @@ export interface AnalyticsOptions {
   collectionKey: string;
   platform: 'ios' | 'android' | 'test';
   appVersion: string;
+  /** Native host detection; does not change collection keys, identity or durable storage scope. */
+  runtimeEnvironment?: RuntimeEnvironment;
   storage: StorageAdapter;
   generateId: () => string;
   /** Pass React Native's AppState for automatic app-open tracking. Missing on iOS/Android emits a configuration warning. */
@@ -195,6 +199,10 @@ export class Analytics {
       !options.appVersion ||
       options.appVersion.length > MOBILE_LIMITS.appVersionLength ||
       !['ios', 'android', 'test'].includes(options.platform) ||
+      (options.runtimeEnvironment !== undefined &&
+        !['production', 'sandbox', 'development', 'unknown'].includes(
+          options.runtimeEnvironment,
+        )) ||
       typeof options.storage?.getItem !== 'function' ||
       typeof options.storage?.setItem !== 'function' ||
       typeof options.generateId !== 'function'
@@ -353,6 +361,9 @@ export class Analytics {
       occurred_at: occurredAt,
       platform: this.options.platform,
       app_version: this.options.appVersion,
+      ...(this.options.runtimeEnvironment
+        ? { runtime_environment: this.options.runtimeEnvironment }
+        : {}),
       properties: snapshotProperties(properties),
     };
   }
