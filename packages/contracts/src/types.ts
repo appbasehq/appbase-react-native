@@ -27,8 +27,19 @@ export interface OnboardingAnswers {
   status: 'observed' | 'limited';
   questions: OnboardingAnswerSummary[];
 }
+/** Wire value captured by SDKs; Unknown is reported as Production. */
 export type RuntimeEnvironment = 'production' | 'sandbox' | 'development' | 'unknown';
-export type RuntimeEnvironmentFilter = RuntimeEnvironment | 'all';
+/** Production is the App Store plus anything without a detected build; Sandbox is TestFlight/App Review. */
+export type ReportingEnvironment = 'production' | 'sandbox' | 'development';
+export interface ReportingScope {
+  id: string;
+  environment: ReportingEnvironment;
+  appId: string;
+  from: string;
+  to: string;
+  asOf: string;
+}
+
 export interface AnalyticsEvent {
   schema_version: 1;
   event_id: string;
@@ -52,7 +63,6 @@ export interface AppRecord {
   id: string;
   name: string;
   slug: string;
-  environment: 'development' | 'production';
   collection_enabled: boolean;
   /** Legacy configuration; reports use discovered flow definitions. */
   flow_id: string;
@@ -63,15 +73,11 @@ export interface AppSetup {
   app: AppRecord;
   events: number;
   last_received_at: string | null;
-  environments: AppRecord[];
   usage: IngestionUsage;
 }
 export interface AppCredentials {
   app: AppRecord;
   collection_key: string;
-}
-export interface AppPairCredentials {
-  environments: AppCredentials[];
 }
 export interface UsageWindow {
   events: number;
@@ -86,6 +92,7 @@ export interface IngestionUsage {
   service: { minute: UsageWindow; day: UsageWindow };
 }
 export interface Report {
+  reporting_scope?: ReportingScope;
   app: AppRecord;
   from: string;
   to: string;
@@ -124,7 +131,7 @@ type ReportViewFields = {
   acquisition: Record<never, never>;
 };
 export type ReportViewResult<V extends ReportView = ReportView> = {
-  [K in V]: Pick<Report, 'app' | 'from' | 'to' | 'generated_at'> & {
+  [K in V]: Pick<Report, 'app' | 'from' | 'to' | 'generated_at' | 'reporting_scope'> & {
     view: K;
     dashboard: Pick<DashboardStats, 'granularity'>;
   } & ReportViewFields[K];
@@ -308,7 +315,6 @@ export interface ObservedUser {
   first_in_period: string;
   last_seen: string;
   platforms: string[];
-  runtime_environments?: RuntimeEnvironment[];
 }
 export interface DashboardStats {
   granularity: ReportGranularity;
@@ -516,6 +522,7 @@ export interface RevenueReport {
   };
 }
 export interface FeedbackSubmission {
+  runtime_environment?: RuntimeEnvironment;
   id: string;
   message: string;
   email?: string;
@@ -529,6 +536,7 @@ export interface FeedbackReceipt {
   received_at: string;
 }
 export interface FeedbackMessage extends FeedbackReceipt {
+  environment: ReportingEnvironment;
   message: string;
   email: string | null;
   platform: 'ios' | 'android' | 'test';

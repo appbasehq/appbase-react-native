@@ -1,6 +1,6 @@
 import { defineConfig } from 'tsup';
 export default defineConfig({
-  entry: ['src/index.ts', 'src/ui.tsx'],
+  entry: ['src/index.ts', 'src/index.native.ts', 'src/ui.tsx'],
   external: ['react', 'react-native', 'react/jsx-runtime'],
   noExternal: [/^@mobile-analytics\//],
   format: ['esm'],

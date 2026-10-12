@@ -155,7 +155,7 @@ const paywallActions = [
   'paywall_dismissed',
 ];
 export const runtimeEnvironmentSchema = z.enum(['production', 'sandbox', 'development', 'unknown']);
-export const runtimeEnvironmentFilterSchema = z.union([z.literal('all'), runtimeEnvironmentSchema]);
+export const reportingEnvironmentSchema = z.enum(['production', 'sandbox', 'development']);
 export const eventSchema = z
   .object({
     schema_version: z.literal(1),
@@ -313,4 +313,13 @@ export const journeyParamsSchema = z.object({
     ),
   cursor: z.string().max(400).optional(),
 });
-export const journeyCursorSchema = z.object({ at: z.iso.datetime(), id: z.uuid() }).strict();
+export const journeyCursorSchema = z
+  .object({
+    at: z.iso.datetime(),
+    id: z.uuid(),
+    scope: z
+      .string()
+      .regex(/^[a-f0-9]{24}$/)
+      .optional(),
+  })
+  .strict();

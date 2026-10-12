@@ -1,6 +1,6 @@
 # Appbase React Native SDK
 
-A small explicit-event SDK for Expo and bare React Native. Its core entry point has no React, React Native, Zod or Expo runtime dependency. The optional `/ui` entry point uses your app’s React and React Native. Supply adapters from the app. Create one instance per app/environment, outside component rendering, and reuse it.
+A small explicit-event SDK for Expo and bare React Native. Its core entry point has no React, React Native, Zod or Expo runtime dependency. The optional `/ui` entry point uses your app’s React and React Native. Supply adapters from the app. Create one instance per app, outside component rendering, and reuse it.
 
 ## Compatibility and reliability
 
@@ -37,7 +37,7 @@ import { createReactNativeAnalytics } from '@appbasehq/react-native';
 
 export const analyticsReady = createReactNativeAnalytics({
   apiUrl: 'https://api.appbase.so',
-  collectionKey: 'YOUR_SAVED_COLLECTION_KEY', // Select dev/prod through build configuration.
+  collectionKey: 'YOUR_SAVED_COLLECTION_KEY', // The app's one key, used in every build.
   platform: Platform.OS === 'ios' ? 'ios' : 'android',
   appVersion: '1.0.0', // Supply the actual app/build version.
   storage: AsyncStorage,
@@ -51,11 +51,20 @@ export const analyticsReady = createReactNativeAnalytics({
 });
 ```
 
-Bare React Native can use the same storage/network adapters and any secure UUID generator supported by that app. Initialization is asynchronous; handle initialization/storage failures in app startup without blocking the user from using the app. Production API URLs require HTTPS. On a physical phone, localhost points to the phone; use the hosted API or an explicitly configured local development endpoint.
+Bare React Native can use the same storage/network adapters and any secure UUID generator supported by that app. Initialization is asynchronous; handle initialization/storage failures in app startup without blocking the user from using the app. API URLs require HTTPS except loopback and private-network development hosts (`localhost`, `*.local`, `127.0.0.1`, `10.x`, `172.16–31.x`, `192.168.x`). On a physical phone, localhost points to the phone; use the hosted API or a development server on your network.
 
-## Native runtime environment
+## Automatic build environment
 
-Pass `runtimeEnvironment` (`production`, `sandbox`, `development`, or `unknown`) from a bounded native host adapter before creating the client. This field labels new events and does not switch collection keys or reset identity. On iOS use verified `AppTransaction.shared.environment`: App Store is production; TestFlight and App Review are sandbox; Xcode StoreKit Testing, simulators and development signing are development. Missing, unverified or unavailable detection stays unknown. The JavaScript SDK cannot inspect Apple's signed app transaction by itself. Do not infer the field from a Production collection key or a purchase callback, and never request receipt refresh, authentication or permissions for analytics. Older queued events retain their original metadata, including an absent field.
+Each app has one collection key for every build. The SDK labels each event with the build it came from, so reports can separate them:
+
+| Build                                                                                 | `runtime_environment` | Dashboard   |
+| ------------------------------------------------------------------------------------- | --------------------- | ----------- |
+| Debug JavaScript (`__DEV__`), simulators, development signing, Xcode StoreKit Testing | `development`         | Development |
+| TestFlight and App Review                                                             | `sandbox`             | TestFlight  |
+| App Store                                                                             | `production`          | Production  |
+| Anything that cannot tell (Android release, iOS 15, failed lookup)                    | `unknown`             | Production  |
+
+Metro resolves the package's React Native entry, which checks `__DEV__` and then asks the bundled iOS module for Apple's verified `AppTransaction.shared.environment`. The module is autolinked: run `pod install` (bare React Native) or rebuild your Expo development/production build (`npx expo prebuild` or EAS). Expo Go cannot load native modules, but it is always a debug build and records Development. Detection is bounded to 2.5 seconds, never calls `refresh()` and never asks for permissions or authentication. Pass `runtimeEnvironment` to override it, for example for an internal ad hoc build. Events already queued keep their original metadata, including an absent field; the field never changes identity or storage.
 
 ## Automatic app opens
 
@@ -113,7 +122,7 @@ Define the flow once in app code. Every emitted event includes its immutable def
 - `getState()`: `{ attemptId, nextStep, completed }` or null. The zero-based nextStep can equal the number of steps before completion.
 - `definition`: read-only ID, resolved version and ordered steps.
 
-Attempts and events are saved together in the existing storage/outbox. A queue/storage failure does not advance progress. Resetting identity or disabling collection clears saved attempts. Calling start after re-enabling begins a new attempt. The report still uses a 24-hour completion window; resuming an older attempt does not extend that window. This version supports linear flows with 1–20 unique step labels and at most 100 definitions per environment. IDs/versions/steps use 1–80 letters, numbers, dots, dashes or underscores, starting with a letter or number.
+Attempts and events are saved together in the existing storage/outbox. A queue/storage failure does not advance progress. Resetting identity or disabling collection clears saved attempts. Calling start after re-enabling begins a new attempt. The report still uses a 24-hour completion window; resuming an older attempt does not extend that window. This version supports linear flows with 1–20 unique step labels and at most 100 definitions per app. IDs/versions/steps use 1–80 letters, numbers, dots, dashes or underscores, starting with a letter or number.
 
 Configuration mistakes in `onboarding({...})` throw synchronously. Runtime tracking mistakes or storage failures are reported through onDiagnostic. Do not let analytics failures block the product flow.
 
@@ -162,7 +171,7 @@ Answers inherit app/environment, identity, flow/version, attempt and step. Value
 
 The chart shows the latest eligible submission per question/attempt, with option counts and percentages of **answered attempts**. Multiple-choice totals may exceed 100%; skips, no recorded answer and conflicting revisions stay separate. Definitions, date/window rules and report limits are in [the tracking plan](https://appbase.so/docs/tracking-plan.md#onboarding-answers).
 
-New collection keys contain the app ID and environment for the SDK storage namespace. The backend authenticates the full key hash; it never trusts a client-supplied environment property. Legacy keys continue to work with their original `appId` and `environment` options. If supplied with a new key, those options must match. Key replacement for the same environment preserves local identity and queued events.
+Collection keys contain the app ID and a storage namespace (`ma_prod_…` for single-key apps; older apps may also hold a retired `ma_dev_…` key). The backend authenticates the full key hash; it never trusts a client-supplied environment property. Legacy keys continue to work with their original `appId` and `environment` options. If supplied with a new key, those options must match. Key replacement preserves local identity and queued events.
 
 ## Paywalls
 
@@ -262,7 +271,7 @@ Explicit contact works while tracking is disabled; in that case analytics identi
 
 ## Configure new users
 
-**Required for SDK acquisition and retention:** in App setup, choose one new-user event and optional exact property filters for each environment. Agents can read, preview and save it using app-scoped setup access. Use the [definition guide](https://appbase.so/docs/first-use.md) for the API, selection examples and acceptance checklist.
+**Required for SDK acquisition and retention:** in App setup, choose one new-user event and optional exact property filters for the app. Agents can read, preview and save it using app-scoped setup access. Use the [definition guide](https://appbase.so/docs/first-use.md) for the API, selection examples and acceptance checklist.
 
 No dedicated SDK marker call is needed. Reuse an existing event such as `onboarding_started` with `flow_id`, or track an ordinary entry event. The server counts each resolved identity once, at its earliest matching occurrence across recorded history. A brand-new app can explicitly select automatic `app_first_open`; existing apps must audit returning-user and upgrade paths before choosing it. Completion/purchase events exclude people who dropped out earlier.
 

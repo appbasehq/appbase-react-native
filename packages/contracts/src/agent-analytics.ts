@@ -33,6 +33,7 @@ export const agentReportQuerySchema = z
     from: z.iso.date(),
     to: z.iso.date(),
     granularity: z.enum(reportGranularities).default('daily'),
+    environment: z.enum(['production', 'sandbox', 'development']).default('production'),
     compare: z.literal('previous_period').optional(),
     flow_id: label.optional(),
     flow_version: label.optional(),

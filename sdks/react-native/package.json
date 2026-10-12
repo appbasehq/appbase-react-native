@@ -1,12 +1,14 @@
 {
   "name": "@appbasehq/react-native",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "type": "module",
   "main": "./dist/index.js",
+  "react-native": "./dist/index.native.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
+      "react-native": "./dist/index.native.js",
       "default": "./dist/index.js"
     },
     "./ui": {
@@ -16,6 +18,8 @@
   },
   "files": [
     "dist",
+    "ios",
+    "AppbaseReactNative.podspec",
     "README.md",
     "LICENSE"
   ],

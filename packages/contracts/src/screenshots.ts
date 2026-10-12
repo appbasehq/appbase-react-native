@@ -45,7 +45,7 @@ export interface StepScreenshot extends ScreenshotMetadata {
   thumbnail_bytes: number;
 }
 export interface ScreenshotListing {
-  app: { id: string; name: string; environment: 'development' | 'production' };
+  app: { id: string; name: string };
   flows: { id: string; version: string; steps: string[] }[];
   screenshots: StepScreenshot[];
   available: boolean;

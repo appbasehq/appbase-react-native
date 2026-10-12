@@ -515,9 +515,15 @@ describe('key-derived environments and server backoff', () => {
         options({ collectionKey: key('prod'), appId: id, environment: 'development' }),
       ),
     ).rejects.toThrow('does not match');
+    // Plain HTTP is allowed only for local development hosts.
     await expect(
       createReactNativeAnalytics(
-        options({ collectionKey: key('prod'), appId: undefined, environment: undefined }),
+        options({
+          collectionKey: key('prod'),
+          appId: undefined,
+          environment: undefined,
+          apiUrl: 'http://analytics.example',
+        }),
       ),
     ).rejects.toThrow('HTTPS');
     await rotated.dispose();

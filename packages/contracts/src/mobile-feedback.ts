@@ -5,6 +5,7 @@ import { MOBILE_LIMITS as limits } from './mobile-constants.js';
 export const feedbackSubmissionSchema = z
   .object({
     id: z.uuid(),
+    runtime_environment: z.enum(['production', 'sandbox', 'development', 'unknown']).optional(),
     message: z
       .string()
       .trim()

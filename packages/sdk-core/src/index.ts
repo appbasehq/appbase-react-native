@@ -77,6 +77,42 @@ export interface Onboarding {
   complete(properties?: Properties): Promise<void>;
   getState(): Promise<OnboardingAttempt | null>;
 }
+const RUNTIME_DETECTION_MS = 2500;
+const runtimeEnvironments: readonly RuntimeEnvironment[] = [
+  'production',
+  'sandbox',
+  'development',
+  'unknown',
+];
+/** Bounded host detection; it never blocks initialization indefinitely or throws. */
+async function detectRuntime(
+  detect: () => Promise<RuntimeEnvironment>,
+): Promise<RuntimeEnvironment> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const value = await Promise.race([
+      Promise.resolve().then(detect),
+      new Promise<RuntimeEnvironment>((resolve) => {
+        timer = setTimeout(() => resolve('unknown'), RUNTIME_DETECTION_MS);
+      }),
+    ]);
+    return runtimeEnvironments.includes(value) ? value : 'unknown';
+  } catch {
+    return 'unknown';
+  } finally {
+    clearTimeout(timer);
+  }
+}
+/** Plain HTTP is accepted only for loopback and private-network development servers. */
+function localHost({ hostname }: URL) {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return true;
+  if (host === '::1') return true;
+  const ip = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host)?.slice(1).map(Number);
+  if (!ip || ip.some((part) => part > 255)) return false;
+  const [a, b] = ip;
+  return a === 127 || a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
 // Stable non-security fingerprint. The server compares the full ordered definition,
 // so even a fingerprint collision cannot overwrite an existing version.
 function automaticVersion(steps: readonly string[], questions: OnboardingDefinition['questions']) {
@@ -120,8 +156,13 @@ export interface AnalyticsOptions {
   collectionKey: string;
   platform: 'ios' | 'android' | 'test';
   appVersion: string;
-  /** Native host detection; does not change collection keys, identity or durable storage scope. */
+  /** Build environment at capture; an explicit value overrides automatic detection. */
   runtimeEnvironment?: RuntimeEnvironment;
+  /**
+   * Host detection used when runtimeEnvironment is omitted (the React Native entry supplies one).
+   * Bounded; failures and timeouts record Unknown, which reports count as Production.
+   */
+  detectRuntimeEnvironment?: () => Promise<RuntimeEnvironment>;
   storage: StorageAdapter;
   generateId: () => string;
   /** Pass React Native's AppState for automatic app-open tracking. Missing on iOS/Android emits a configuration warning. */
@@ -255,11 +296,16 @@ export class Analytics {
       Math.min(options.batchSize ?? MOBILE_LIMITS.defaultBatchSize, MOBILE_LIMITS.batchEvents),
     );
     this.capacity = Math.max(1, options.maxQueueSize ?? MOBILE_LIMITS.defaultQueueSize);
-    if (!/^https:\/\//.test(options.apiUrl) && environment === 'production')
-      throw new Error('Production analytics requires HTTPS');
+    if (endpoint.protocol !== 'https:' && environment === 'production' && !localHost(endpoint))
+      throw new Error('Production analytics requires HTTPS outside local development hosts');
   }
 
   static async create(options: AnalyticsOptions): Promise<Analytics> {
+    if (options.runtimeEnvironment === undefined && options.detectRuntimeEnvironment)
+      options = {
+        ...options,
+        runtimeEnvironment: await detectRuntime(options.detectRuntimeEnvironment),
+      };
     const client = new Analytics(options);
     options = client.options;
     const stored = await client.options.storage.getItem(client.key);
@@ -430,6 +476,9 @@ export class Analytics {
       {
         platform: this.options.platform,
         app_version: this.options.appVersion,
+        ...(this.options.runtimeEnvironment
+          ? { runtime_environment: this.options.runtimeEnvironment }
+          : {}),
         ...identity,
       },
       {
