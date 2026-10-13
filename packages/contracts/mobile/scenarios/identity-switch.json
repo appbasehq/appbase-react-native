@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "id": "identity-switch",
+  "capability": "identity",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "track",
+      "name": "before_login"
+    },
+    {
+      "op": "identify",
+      "userId": "customer-a"
+    },
+    {
+      "op": "identify",
+      "userId": "customer-a"
+    },
+    {
+      "op": "track",
+      "name": "as_customer_a"
+    },
+    {
+      "op": "identify",
+      "userId": "customer-b"
+    },
+    {
+      "op": "track",
+      "name": "as_customer_b"
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:before",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "before_login",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:link-a",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "user_id": "customer-a",
+              "name": "identity_linked",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:a",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "user_id": "customer-a",
+              "name": "as_customer_a",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:link-b",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:switched",
+              "user_id": "customer-b",
+              "name": "identity_linked",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:b",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:switched",
+              "user_id": "customer-b",
+              "name": "as_customer_b",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": []
+  }
+}

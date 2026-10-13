@@ -1,5 +1,6 @@
 import { validUuid } from './validation.js';
 import { retryDelay } from './delivery.js';
+import { storableText } from './properties.js';
 import { MOBILE_LIMITS } from '@mobile-analytics/contracts/mobile-constants';
 import type { FeedbackReceipt, FeedbackSubmission } from '@mobile-analytics/contracts/types';
 
@@ -39,11 +40,12 @@ export async function submitFeedback(
     !validUuid(id) ||
     !message ||
     message.length > MOBILE_LIMITS.feedbackMessageLength ||
-    message.includes('\0') ||
+    !storableText(message) ||
     (input?.email !== undefined && typeof input.email !== 'string') ||
     (email &&
       (email.length > MOBILE_LIMITS.feedbackEmailLength ||
-        !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email)))
+        !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email) ||
+        !storableText(email)))
   ) {
     throw new FeedbackError(
       'Enter a message of 1–4000 characters and a valid optional email.',

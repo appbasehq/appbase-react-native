@@ -85,6 +85,14 @@
       "value": "\u0000\b\t\n\f\r\"\\/  完成🎉"
     },
     "utf8Bytes": 49,
+    "valid": false
+  },
+  {
+    "id": "control-unicode-slashes-without-nul",
+    "properties": {
+      "value": "\b\t\n\f\r\"\\/  完成🎉"
+    },
+    "utf8Bytes": 43,
     "valid": true
   },
   {

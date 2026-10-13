@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.6.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.7.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.6.0
+npm install @appbasehq/react-native@0.7.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -107,6 +107,8 @@ await onboarding.step('welcome');
 // When each of the other screens becomes visible:
 await onboarding.step('goal');
 await onboarding.step('notifications');
+// Right after recording the onboarding paywall view (or after the last screen
+// when there is no paywall). Never wait for a purchase.
 await onboarding.complete();
 ```
 
@@ -118,11 +120,11 @@ Define the flow once in app code. Every emitted event includes its immutable def
 - `restart(properties?)`: explicitly start a new attempt.
 - `step(id, properties?)`: record a declared step when visible. Previously visited steps can be revisited; skipping an unreached preceding step is diagnosed and not recorded.
 - `answer(questionId, selection, properties?)`: submit one option ID, an array of option IDs, or `null` for an explicit skip. The question's step must already have been viewed in the current, unfinished attempt. This records an answer without another step view. Confirm answers on Continue/Submit, not on each toggle. Empty arrays are invalid; use `null` to skip.
-- `complete(properties?)`: record completion once after all declared steps have been recorded.
+- `complete(properties?)`: record completion once after all declared steps have been recorded. Call it when the person reaches the onboarding paywall (right after recording its view), or after the last screen when there is no paywall; never wait for a purchase.
 - `getState()`: `{ attemptId, nextStep, completed }` or null. The zero-based nextStep can equal the number of steps before completion.
 - `definition`: read-only ID, resolved version and ordered steps.
 
-Attempts and events are saved together in the existing storage/outbox. A queue/storage failure does not advance progress. Resetting identity or disabling collection clears saved attempts. Calling start after re-enabling begins a new attempt. The report still uses a 24-hour completion window; resuming an older attempt does not extend that window. This version supports linear flows with 1–20 unique step labels and at most 100 definitions per app. IDs/versions/steps use 1–80 letters, numbers, dots, dashes or underscores, starting with a letter or number.
+Attempts and events are saved together in the existing storage/outbox. A queue/storage failure does not advance progress. Resetting identity or disabling collection clears saved attempts. Calling start after re-enabling begins a new attempt. Reports credit progress, answers and completion to the attempt's start date whenever they happen, so resuming an older attempt days later still counts. This version supports linear flows with 1–20 unique step labels and at most 100 definitions per app. IDs/versions/steps use 1–80 letters, numbers, dots, dashes or underscores, starting with a letter or number.
 
 Configuration mistakes in `onboarding({...})` throw synchronously. Runtime tracking mistakes or storage failures are reported through onDiagnostic. Do not let analytics failures block the product flow.
 
@@ -179,7 +181,7 @@ Define a paywall once, then create a view when it actually becomes visible. Call
 
 Use this same API for onboarding and in-app paywalls. Supply `onboarding` only for a presentation belonging to that attempt; omit it for later settings/feature-gate presentations, even when the design is the same. Different designs (including an exit discount) get separate IDs; a discount during onboarding keeps the same onboarding link. There is no second `onboarding.paywall()` API. The dashboard shows linked presentations inside the onboarding journey and other presentations in **In-app paywalls**. See `/docs/paywalls.md` for examples and metric definitions.
 
-Record the configured onboarding steps before showing the linked paywall. The dashboard automatically derives **Paywall viewed → Subscription started** after those ordered steps; do not add a duplicate paywall step. Repeat views and optional discount offers count once per attempt. Subscription starts require the RevenueCat identity/transaction integration below and include trials or direct purchases. `onboarding.complete()` remains independent of buying. Earlier/missing-step paywall presentations stay recorded but are excluded from this ordered path.
+Record the configured onboarding steps before showing the linked paywall. The dashboard automatically derives **Paywall viewed → Subscription started** after those ordered steps; do not add a duplicate paywall step. Repeat views and optional discount offers count once per attempt. Subscription starts require the RevenueCat identity/transaction integration below and include trials or direct purchases. Call `onboarding.complete()` right after recording this view; completion means reaching the paywall, not buying. Earlier/missing-step paywall presentations stay recorded but are excluded from this ordered path.
 
 ```ts
 const paywall = analytics.paywall({ id: 'upgrade', version: 1 });
@@ -240,7 +242,7 @@ The callback is deliberate: analytics captures its identity **before** asking Re
 
 Returns the durable event ID, or null when disabled, stale, invalid, full, lookup-failed or not persisted. Identical consecutive project/customer links for the same analytics identity return the same ID, including after restart. This means recorded locally, not delivered or provider-verified. Events and deduplication state are saved atomically; offline retries preserve the original identity/time/event ID. A changed project/customer or a successful analytics identity change creates new evidence. Project/customer IDs are case-sensitive, opaque 1–255 characters without surrounding whitespace or control characters; do not use an email address as an account ID.
 
-**Account changes:** serialize your existing authentication and RevenueCat operations at the application level. After successful RevenueCat login, call analytics identify for that same app account, then sync. When switching accounts, reset analytics before identifying the next account. After successful RevenueCat logout and analytics reset, sync the new anonymous ID. Sync again after restore and at initialization. Keep the lookup callback limited to reading the current ID; it should not log in/out or mutate analytics identity itself. The SDK cannot detect a RevenueCat-only account change that the app never communicates to analytics.
+**Account changes:** serialize your existing authentication and RevenueCat operations at the application level. After successful RevenueCat login, call analytics identify for that same app account, then sync. When switching accounts, reset analytics before identifying the next account; if a different identified user arrives without reset, `identify` resets first so nothing is credited to the previous account. After successful RevenueCat logout and analytics reset, sync the new anonymous ID. Sync again after restore and at initialization. Keep the lookup callback limited to reading the current ID; it should not log in/out or mutate analytics identity itself. The SDK cannot detect a RevenueCat-only account change that the app never communicates to analytics.
 
 Do not substitute our anonymous UUID for RevenueCat's App User ID, automatically merge restored users, or change the app's RevenueCat authentication policy to use this helper. RevenueCat has its own anonymous/alias behavior. See [RevenueCat identity documentation](https://www.revenuecat.com/docs/customers/identifying-customers).
 

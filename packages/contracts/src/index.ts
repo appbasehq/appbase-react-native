@@ -11,6 +11,10 @@ export * from './reporting.js';
 export * from './agent-analytics.js';
 export * from './acquisition.js';
 export * from './period-overview.js';
+/** PostgreSQL text/jsonb cannot store NUL or unpaired UTF-16 surrogates; reject them per event. */
+export const storableText = (value: string) => !/[\u0000\uD800-\uDFFF]/u.test(value);
+const unstorable = 'Text contains a NUL or unpaired surrogate character';
+const storable = (schema: z.ZodString) => schema.refine(storableText, unstorable);
 export const trackingLabel = z
   .string()
   .trim()
@@ -33,14 +37,14 @@ export const onboardingQuestionSchema = z
   .object({
     id: trackingLabel,
     stepId: trackingLabel,
-    title: z.string().trim().min(1).max(limits.questionTitleLength),
+    title: storable(z.string().trim().min(1).max(limits.questionTitleLength)),
     type: z.enum(['single', 'multiple']),
     options: z
       .array(
         z
           .object({
             id: trackingLabel,
-            label: z.string().trim().min(1).max(limits.optionLabelLength),
+            label: storable(z.string().trim().min(1).max(limits.optionLabelLength)),
           })
           .strict(),
       )
@@ -97,11 +101,13 @@ export const onboardingAnswerSchema = z
   });
 export const collectionStateSchema = z.object({ enabled: z.boolean() }).strict();
 const property = z.union([
-  z.string().max(limits.propertyStringLength),
+  storable(z.string().max(limits.propertyStringLength)),
   z.number().finite(),
   z.boolean(),
   z.null(),
-  z.array(z.string().max(limits.propertyArrayStringLength)).max(limits.propertyArrayLength),
+  z
+    .array(storable(z.string().max(limits.propertyArrayStringLength)))
+    .max(limits.propertyArrayLength),
 ]);
 const storeId = z
   .string()
@@ -162,14 +168,14 @@ export const eventSchema = z
     event_id: z.uuid(),
     installation_id: z.uuid(),
     anonymous_id: z.uuid(),
-    user_id: z.string().min(1).max(limits.userIdLength).optional(),
+    user_id: storable(z.string().min(1).max(limits.userIdLength)).optional(),
     name: z.string().regex(new RegExp(`^[a-z][a-z0-9_.]{0,${limits.eventNameLength - 1}}$`)),
     occurred_at: z.iso.datetime({ offset: true }),
     platform: z.enum(['ios', 'android', 'test']),
-    app_version: z.string().min(1).max(limits.appVersionLength),
+    app_version: storable(z.string().min(1).max(limits.appVersionLength)),
     runtime_environment: runtimeEnvironmentSchema.optional(),
     properties: z
-      .record(z.string().min(1).max(limits.propertyKeyLength), property)
+      .record(storable(z.string().min(1).max(limits.propertyKeyLength)), property)
       .refine((p) => Object.keys(p).length <= limits.propertyCount, 'Too many properties')
       .refine(
         (p) => new TextEncoder().encode(JSON.stringify(p)).length <= limits.propertiesBytes,
@@ -313,6 +319,11 @@ export const journeyParamsSchema = z.object({
     ),
   cursor: z.string().max(400).optional(),
 });
+/** Owner marks (or unmarks) one person as a tester; Production reports leave testers out. */
+export const testerMarkSchema = journeyParamsSchema
+  .pick({ subject: true })
+  .extend({ is_tester: z.boolean() })
+  .strict();
 export const journeyCursorSchema = z
   .object({
     at: z.iso.datetime(),

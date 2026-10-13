@@ -1,6 +1,6 @@
 import { MOBILE_LIMITS } from '@mobile-analytics/contracts/mobile-constants';
 import type { OnboardingDefinition, OnboardingQuestion } from '@mobile-analytics/contracts/types';
-import { jsonBytes, validProperties } from './properties.js';
+import { jsonBytes, storableText, validProperties } from './properties.js';
 
 export const validUuid = (value: unknown): value is string =>
   typeof value === 'string' &&
@@ -22,7 +22,11 @@ const uuidUnique = (values: string[]) => unique(values.map((value) => value.toLo
 const positiveInteger = (value: unknown): value is number =>
   typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 const text = (value: unknown, max: number): value is string =>
-  typeof value === 'string' && value.length > 0 && value.length <= max && value.trim() === value;
+  typeof value === 'string' &&
+  value.length > 0 &&
+  value.length <= max &&
+  value.trim() === value &&
+  storableText(value);
 export const validStoreId = (value: unknown): value is string =>
   text(value, MOBILE_LIMITS.storeIdLength);
 export const validProviderId = (value: unknown): value is string =>

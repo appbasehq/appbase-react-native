@@ -93,6 +93,11 @@ export interface IngestionUsage {
 }
 export interface Report {
   reporting_scope?: ReportingScope;
+  /** Owner-marked testers left out of this Production read (0 elsewhere). */
+  testers_excluded?: number;
+  /** Production only: installs active in range that never reported a build (older app versions,
+   * Android) and therefore count as Production. 0 elsewhere. */
+  unverified_builds?: number;
   app: AppRecord;
   from: string;
   to: string;
@@ -131,7 +136,16 @@ type ReportViewFields = {
   acquisition: Record<never, never>;
 };
 export type ReportViewResult<V extends ReportView = ReportView> = {
-  [K in V]: Pick<Report, 'app' | 'from' | 'to' | 'generated_at' | 'reporting_scope'> & {
+  [K in V]: Pick<
+    Report,
+    | 'app'
+    | 'from'
+    | 'to'
+    | 'generated_at'
+    | 'reporting_scope'
+    | 'testers_excluded'
+    | 'unverified_builds'
+  > & {
     view: K;
     dashboard: Pick<DashboardStats, 'granularity'>;
   } & ReportViewFields[K];
@@ -308,6 +322,8 @@ export interface TrendPoint {
 }
 export interface ObservedUser {
   subject: string;
+  /** Owner-marked tester: browsable here, left out of Production reports. */
+  is_tester: boolean;
   /** Latest safely linked RevenueCat profile country, not event-time location. */
   country_code: string | null;
   events: number;
@@ -388,6 +404,8 @@ export interface FeaturePropertiesReport {
 }
 export interface Journey {
   subject: string;
+  /** Owner-marked tester: browsable here, left out of Production reports. */
+  is_tester: boolean;
   country_code: string | null;
   from: string;
   to: string;

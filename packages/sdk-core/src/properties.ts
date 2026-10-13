@@ -10,23 +10,31 @@ export function snapshotProperties(properties: Properties): Properties {
   );
 }
 
+/** The server stores text in PostgreSQL, which rejects NUL and unpaired UTF-16 surrogates. */
+export const storableText = (value: string) => !/[\u0000\uD800-\uDFFF]/u.test(value);
+
 export function validProperties(properties: Properties) {
   if (!properties || typeof properties !== 'object' || Array.isArray(properties)) return false;
   const valid =
     Object.keys(properties).length <= MOBILE_LIMITS.propertyCount &&
     Object.keys(properties).every(
-      (k) => k.length > 0 && k.length <= MOBILE_LIMITS.propertyKeyLength,
+      (k) => k.length > 0 && k.length <= MOBILE_LIMITS.propertyKeyLength && storableText(k),
     ) &&
     Object.values(properties).every(
       (v) =>
         v === null ||
         typeof v === 'boolean' ||
         (typeof v === 'number' && Number.isFinite(v)) ||
-        (typeof v === 'string' && v.length <= MOBILE_LIMITS.propertyStringLength) ||
+        (typeof v === 'string' &&
+          v.length <= MOBILE_LIMITS.propertyStringLength &&
+          storableText(v)) ||
         (Array.isArray(v) &&
           v.length <= MOBILE_LIMITS.propertyArrayLength &&
           v.every(
-            (s) => typeof s === 'string' && s.length <= MOBILE_LIMITS.propertyArrayStringLength,
+            (s) =>
+              typeof s === 'string' &&
+              s.length <= MOBILE_LIMITS.propertyArrayStringLength &&
+              storableText(s),
           )),
     );
   if (!valid) return false;

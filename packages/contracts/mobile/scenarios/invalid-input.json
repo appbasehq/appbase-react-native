@@ -23,6 +23,13 @@
       "op": "track",
       "name": "valid",
       "properties": {
+        "note": "cut\u0000here"
+      }
+    },
+    {
+      "op": "track",
+      "name": "valid",
+      "properties": {
         "count": 3,
         "enabled": true
       }
@@ -72,6 +79,6 @@
       "enabled": true,
       "blocked": false
     },
-    "diagnostics": ["invalid_event", "invalid_event"]
+    "diagnostics": ["invalid_event", "invalid_event", "invalid_event"]
   }
 }

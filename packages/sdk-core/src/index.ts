@@ -1,5 +1,5 @@
 import { MOBILE_LIMITS } from '@mobile-analytics/contracts/mobile-constants';
-import { jsonBytes, snapshotProperties, validProperties } from './properties.js';
+import { jsonBytes, snapshotProperties, storableText, validProperties } from './properties.js';
 import { acknowledgedIds, retryDelay } from './delivery.js';
 import {
   validEventName,
@@ -239,6 +239,7 @@ export class Analytics {
       typeof options.appVersion !== 'string' ||
       !options.appVersion ||
       options.appVersion.length > MOBILE_LIMITS.appVersionLength ||
+      !storableText(options.appVersion) ||
       !['ios', 'android', 'test'].includes(options.platform) ||
       (options.runtimeEnvironment !== undefined &&
         !['production', 'sandbox', 'development', 'unknown'].includes(
@@ -334,8 +335,19 @@ export class Analytics {
         void client.flush();
       }, interval);
     if (options.appState) {
+      // An open is a return from the background (or a launch). iOS `inactive` interruptions such
+      // as Control Center, system alerts, Face ID or the purchase sheet are not new opens.
+      let away = options.appState.currentState !== 'active';
       const subscription = options.appState.addEventListener('change', (state) => {
-        if (state === 'active') void client.track('app_active').then(() => client.flush());
+        if (state === 'active') {
+          if (!away) return;
+          away = false;
+          void client.track('app_active').then(() => client.flush());
+        } else if (state === 'background' || state === 'inactive') {
+          if (state === 'background') away = true;
+          // Best effort before the OS suspends JavaScript; events otherwise wait for next open.
+          void client.flush();
+        }
       });
       client.cleanup.push(() => subscription.remove());
       // A cold launch may already be active before the listener is installed.
@@ -804,7 +816,12 @@ export class Analytics {
   }
   async identify(userId: string): Promise<void> {
     if (this.disposed) return;
-    if (typeof userId !== 'string' || !userId || userId.length > MOBILE_LIMITS.userIdLength) {
+    if (
+      typeof userId !== 'string' ||
+      !userId ||
+      userId.length > MOBILE_LIMITS.userIdLength ||
+      !storableText(userId)
+    ) {
       this.diagnose({
         code: 'invalid_event',
         message: 'Use an opaque user ID of 1–200 characters',
@@ -813,12 +830,13 @@ export class Analytics {
     }
     try {
       await this.update(() => {
-        if (this.state.userId && this.state.userId !== userId)
-          throw new Error('Call reset before switching accounts');
-        if (this.state.userId !== userId) {
-          this.identityRevision++;
-          delete this.state.revenuecatIdentity;
-        }
+        // Repeating the current account (for example on every launch) is not a new link.
+        if (this.state.userId === userId) return;
+        // Another account on this device: start a new anonymous identity first, so none of the
+        // new person's activity, workflows or purchases are credited to the previous account.
+        if (this.state.userId) this.startAnonymousIdentity();
+        this.identityRevision++;
+        delete this.state.revenuecatIdentity;
         this.state.userId = userId;
         if (this.state.enabled) this.enqueue(this.event('identity_linked', {}));
       }, true);
@@ -831,23 +849,25 @@ export class Analytics {
   }
   async reset(): Promise<void> {
     if (this.disposed) return;
-    await this.update(() => {
-      const anonymousId = this.nextId();
-      if (
-        [
-          this.state.anonymousId,
-          this.state.installationId,
-          ...this.state.events.map((e) => e.anonymous_id),
-        ].some((id) => id.toLowerCase() === anonymousId.toLowerCase())
-      )
-        throw new Error('reset requires a new anonymous UUID');
-      this.identityRevision++;
-      delete this.state.revenuecatIdentity;
-      this.state.anonymousId = anonymousId;
-      delete this.state.userId;
-      this.state.onboarding = {};
-      this.state.paywalls = {};
-    }, true);
+    await this.update(() => this.startAnonymousIdentity(), true);
+  }
+  /** New anonymous identity without per-person workflow state; the caller's update persists it. */
+  private startAnonymousIdentity() {
+    const anonymousId = this.nextId();
+    if (
+      [
+        this.state.anonymousId,
+        this.state.installationId,
+        ...this.state.events.map((e) => e.anonymous_id),
+      ].some((id) => id.toLowerCase() === anonymousId.toLowerCase())
+    )
+      throw new Error('reset requires a new anonymous UUID');
+    this.identityRevision++;
+    delete this.state.revenuecatIdentity;
+    this.state.anonymousId = anonymousId;
+    delete this.state.userId;
+    this.state.onboarding = {};
+    this.state.paywalls = {};
   }
   async setEnabled(enabled: boolean): Promise<void> {
     if (this.disposed) return;
@@ -935,6 +955,8 @@ export class Analytics {
             headers: {
               'Content-Type': 'application/json',
               'X-API-Key': this.options.collectionKey,
+              // Device clock at send time; the server corrects event times from a wrong clock.
+              'X-Appbase-Sent-At': this.clock().toISOString(),
             },
             body: JSON.stringify({ events: batch }),
             signal: controller.signal,

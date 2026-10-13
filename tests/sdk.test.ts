@@ -126,6 +126,56 @@ describe('React Native delivery core', () => {
     expect(remove).toHaveBeenCalledOnce();
     expect(onDiagnostic).not.toHaveBeenCalled();
   });
+  it('reports the device clock with each batch so the server can correct skew', async () => {
+    const headers: Record<string, string>[] = [];
+    const sdk = await createReactNativeAnalytics(
+      options({
+        now: () => new Date('2001-01-01T00:00:00Z'),
+        fetch: async (_url, init) => {
+          headers.push(init!.headers as Record<string, string>);
+          return success(decode(init));
+        },
+      }),
+    );
+    await sdk.flush();
+    expect(headers[0]['X-Appbase-Sent-At']).toBe('2001-01-01T00:00:00.000Z');
+    await sdk.dispose();
+  });
+  it('ignores inactive-only interruptions and flushes when the app leaves the foreground', async () => {
+    let listener!: (state: string) => void;
+    const received: AnalyticsEvent[] = [];
+    const sdk = await createReactNativeAnalytics(
+      options({
+        platform: 'ios',
+        flushIntervalMs: 0,
+        appState: {
+          currentState: 'active',
+          addEventListener: (_event, fn) => {
+            listener = fn;
+            return { remove: vi.fn() };
+          },
+        },
+        fetch: async (_url, init) => {
+          received.push(...decode(init));
+          return success(decode(init));
+        },
+      }),
+    );
+    await sdk.flush();
+    expect(received.map((e) => e.name)).toEqual(['app_first_open', 'app_active']);
+    // Control Center, a system alert or the purchase sheet: inactive, then active again.
+    listener('inactive');
+    listener('active');
+    await sdk.track('paywall_closed');
+    // Leaving the app delivers what is queued without waiting for the next open.
+    listener('inactive');
+    listener('background');
+    await vi.waitFor(() => expect(received.map((e) => e.name)).toContain('paywall_closed'));
+    expect(received.filter((e) => e.name === 'app_active')).toHaveLength(1);
+    listener('active');
+    await vi.waitFor(() => expect(received.filter((e) => e.name === 'app_active')).toHaveLength(2));
+    await sdk.dispose();
+  });
   it('waits for foreground when initial AppState is unknown, respects opt-out, and records first-open once across restart', async () => {
     const store = storage();
     const received: AnalyticsEvent[] = [];
