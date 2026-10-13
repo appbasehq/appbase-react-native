@@ -4,8 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { eventSchema } from '../packages/contracts/src/index.js';
 import { feedbackSubmissionSchema } from '../packages/contracts/src/mobile-feedback.js';
 import {
+  connectRevenueCat,
   createReactNativeAnalytics,
   FeedbackError,
+  type RevenueCatCustomerInfo,
+  type RevenueCatIntegration,
   type AnalyticsOptions,
   type AnalyticsEvent,
   type Onboarding,
@@ -92,6 +95,22 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
       purchases = new Map<string, PaywallPurchase>();
     const viewIds = new Map<string, string>(),
       purchaseIds = new Map<string, string>();
+    // RevenueCat's `Purchases` as the integration sees it; the scenario scripts its customer.
+    const customer = (active: string[]): RevenueCatCustomerInfo => ({
+      entitlements: { active: Object.fromEntries(active.map((id) => [id, { identifier: id }])) },
+    });
+    const listeners = new Set<(info: RevenueCatCustomerInfo) => void>();
+    const revenueCatCustomer = { appUserId: '', info: customer([]) };
+    const purchasesFake = {
+      getAppUserID: async () => revenueCatCustomer.appUserId,
+      getCustomerInfo: async () => revenueCatCustomer.info,
+      addCustomerInfoUpdateListener: (l: (info: RevenueCatCustomerInfo) => void) => {
+        listeners.add(l);
+      },
+      removeCustomerInfoUpdateListener: (l: (info: RevenueCatCustomerInfo) => void) =>
+        listeners.delete(l),
+    };
+    let revenueCat: RevenueCatIntegration | undefined;
     const transport: typeof fetch = async (url, init) => {
       const path = new URL(String(url)).pathname;
       const body = JSON.parse(String(init?.body));
@@ -185,6 +204,7 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
             failSaves++;
             break;
           case 'restart':
+            revenueCat?.dispose();
             await sdk.dispose();
             if (action.runtimeEnvironment !== undefined)
               options.runtimeEnvironment = action.runtimeEnvironment;
@@ -254,6 +274,53 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
           case 'paywall.dismiss':
             expect(await views.get(action.view)!.dismissed({ reason: action.reason })).toBe(true);
             break;
+          case 'revenuecat.connect':
+            revenueCatCustomer.appUserId = action.appUserId;
+            revenueCatCustomer.info = customer(action.activeEntitlements);
+            revenueCat = connectRevenueCat(sdk, purchasesFake, {
+              projectId: action.projectId,
+              ...(action.entitlement ? { entitlement: action.entitlement } : {}),
+            });
+            await revenueCat.settled();
+            break;
+          case 'revenuecat.update':
+            if (action.appUserId) revenueCatCustomer.appUserId = action.appUserId;
+            revenueCatCustomer.info = customer(action.activeEntitlements);
+            listeners.forEach((listener) => listener(revenueCatCustomer.info));
+            await revenueCat!.settled();
+            break;
+          case 'revenuecat.view': {
+            const view = await walls
+              .get(action.handle)!
+              .view({ ...action.options, accessState: revenueCat!.accessState() });
+            expect(view).not.toBeNull();
+            views.set(action.view, view!);
+            viewIds.set(action.view, view!.viewId);
+            break;
+          }
+          case 'revenuecat.purchase': {
+            // The result and error shapes react-native-purchases returns and throws.
+            const store = action.store;
+            await revenueCat!
+              .purchase(views.get(action.view)!, action.product, async () => {
+                if (store.transactionId)
+                  return {
+                    customerInfo: customer([]),
+                    transaction: { transactionIdentifier: store.transactionId },
+                  };
+                if (store.cancelled)
+                  throw Object.assign(new Error('Cancelled'), { userCancelled: true });
+                if (store.errorCode)
+                  throw Object.assign(new Error('RevenueCat error'), {
+                    code: store.errorCode,
+                    userCancelled: store.errorCode === '1',
+                  });
+                throw new Error('Store unavailable');
+              })
+              .catch(() => undefined);
+            await revenueCat!.settled();
+            break;
+          }
           case 'revenuecat.link':
             expect(
               await sdk.linkRevenueCatUser({

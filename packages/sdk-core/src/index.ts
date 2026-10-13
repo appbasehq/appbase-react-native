@@ -21,6 +21,7 @@ import {
 } from './paywall.js';
 export type {
   Paywall,
+  PaywallAccessState,
   PaywallOptions,
   PaywallViewOptions,
   PaywallView,
@@ -28,6 +29,14 @@ export type {
   PaywallPurchase,
   PurchaseResult,
 } from './paywall.js';
+export type { PaywallTarget } from './purchase-tracking.js';
+export {
+  connectRevenueCat,
+  type RevenueCatCustomerInfo,
+  type RevenueCatIntegration,
+  type RevenueCatIntegrationOptions,
+  type RevenueCatPurchases,
+} from './revenuecat-integration.js';
 import type {
   RuntimeEnvironment,
   AnalyticsEvent,

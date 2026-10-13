@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.7.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.8.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.7.0
+npm install @appbasehq/react-native@0.8.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -222,6 +222,36 @@ All interaction methods use the same persistent queue. Selection, result and dis
 Custom view properties are copied onto its later events. Reserved paywall/product/purchase/flow fields are controlled by the helper, so custom properties cannot overwrite them. Product, offer, transaction and error identifiers are opaque strings of 1–200 characters without surrounding whitespace. Paywall IDs/placements use the same stable label format as onboarding.
 
 Generic `track(name, properties)` remains available. Properties support strings, finite numbers, booleans, null and bounded string lists (at most 20 entries, each at most 200 characters); nested objects are unsupported. All properties together are limited to 40 fields / 8 KiB UTF-8 JSON. Arrays and event context are copied at call time. Existing placement/version-only `paywall_viewed` events remain supported.
+
+## RevenueCat integration (recommended)
+
+If the app uses RevenueCat, connect it once after `Purchases.configure()`. It keeps RevenueCat's customer linked to the analytics identity, reports access for paywall views and records purchases. It calls only the public APIs in this guide, so it records exactly the events you would record by hand. Appbase has no RevenueCat dependency: pass `Purchases` itself.
+
+```ts
+import Purchases from 'react-native-purchases';
+import { connectRevenueCat } from '@appbasehq/react-native';
+
+const revenueCat = connectRevenueCat(analytics, Purchases, {
+  projectId: 'YOUR_REVENUECAT_PROJECT_ID', // A project ID, not any API key.
+  entitlement: 'premium', // Optional; any active entitlement counts when omitted.
+});
+
+const view = await upgrade.view({
+  placement: 'settings',
+  productIds: packages.map((p) => p.product.identifier),
+  accessState: revenueCat.accessState(),
+});
+// Same result, or the same error, as Purchases.purchasePackage(pkg):
+const result = await revenueCat.purchase(view, pkg.product.identifier, () =>
+  Purchases.purchasePackage(pkg),
+);
+```
+
+- **Identity:** linked on connect, after every RevenueCat customer update (login, logout, restore, purchase) and before each purchase. After `analytics.identify()` or `reset()` without a RevenueCat change, call `await revenueCat.sync()`.
+- **`accessState()`:** `unknown` until RevenueCat reports customer info, then `active` or `inactive`.
+- **`purchase(view, product, call)`:** records the attempt without waiting, so checkout is never delayed, and returns RevenueCat's result or rethrows its error unchanged. The outcome is succeeded with the store transaction ID, cancelled (`userCancelled`, code `1`), pending (Ask to Buy, code `20`) or failed with RevenueCat's error code. `view` may be a view, a promise of one, or `null` (the purchase still runs and nothing is recorded). Any RevenueCat purchase call works: `purchasePackage`, `purchaseStoreProduct`, `purchaseSubscriptionOption`.
+- Keep calling `view.productSelected()` and `view.dismissed()` yourself; a restore is not a purchase attempt.
+- `settled()` waits until recorded links and outcomes are stored (useful in tests); `dispose()` stops listening to RevenueCat.
 
 ## RevenueCat identity link (optional)
 

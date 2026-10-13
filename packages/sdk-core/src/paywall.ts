@@ -8,10 +8,12 @@ export interface PaywallOptions {
   /** Positive whole number; defaults to 1. Increment for a changed paywall design. */
   version?: number;
 }
+/** Access to the app's paid offering, as the app's billing provider reports it. */
+export type PaywallAccessState = 'inactive' | 'active' | 'unknown';
 export interface PaywallViewOptions {
   placement: string;
   /** Access to this app's paid offering immediately before presentation. Omit if unknown. */
-  accessState?: 'inactive' | 'active' | 'unknown';
+  accessState?: PaywallAccessState;
   /** Exact store IDs (including a base plan where applicable); omit when unknown. */
   productIds?: readonly string[];
   /** An onboarding helper created by this analytics instance. */
