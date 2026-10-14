@@ -28,7 +28,9 @@ For a client-facing change:
 
 Never weaken validation to make a failing scenario pass without reviewing its intended behavior. Never remove historical payload compatibility just because the latest SDK changed. Breaking behavior requires an explicit migration/deprecation policy and a new contract boundary where appropriate. Server-only report changes usually need neither SDK release; platform fixes still run shared conformance to detect regressions.
 
-## Acquisition migration
+## Version compatibility notes
+
+Wire, storage and identity effects of each SDK release. What changed for app developers, and what an upgrade needs, is in the changelogs ([React Native](https://appbase.so/docs/sdk-changelog.md), [Swift](https://appbase.so/docs/swift-sdk-changelog.md)).
 
 React Native 0.9.0 and Swift 0.8.0 add `setProfile` (an identified account's email and name for the dashboard) as the `profile_updated` event in wire schema v1, and retry an Unknown build detection in the background. An API without migration 036 would store a profile as an ordinary event, email included; the hosted API has it. Storage and identities are unchanged, and upgrading needs no code change.
 

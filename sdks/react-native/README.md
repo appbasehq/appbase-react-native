@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.9.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.9.0**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 

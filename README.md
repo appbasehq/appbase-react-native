@@ -6,9 +6,9 @@ This is a generated, independently buildable source mirror for `@appbasehq/react
 
 ## Install in an application
 
-`npm install @appbasehq/react-native`
+`npm install @appbasehq/react-native@0.9.0`
 
-See [the SDK guide](sdks/react-native/README.md) for storage, lifecycle, identity, onboarding, paywalls and explicit feedback. A source version or repository tag is not evidence that the same version has been published to npm.
+Pin the exact version: the npm `latest` tag can lag behind the newest release. See [the changelog](sdks/react-native/CHANGELOG.md) for what each version changed and what an upgrade needs, and [the SDK guide](sdks/react-native/README.md) for storage, lifecycle, identity, onboarding, paywalls and explicit feedback. A source version or repository tag is not evidence that the same version has been published to npm.
 
 ## Build and verify this source
 

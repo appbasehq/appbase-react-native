@@ -21,6 +21,7 @@
     "ios",
     "AppbaseReactNative.podspec",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "sideEffects": false,
