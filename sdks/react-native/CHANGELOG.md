@@ -2,7 +2,7 @@
 
 Newest first. Each release says what changed and what an upgrade needs. To upgrade, read every entry between your installed version and the target, apply each **Upgrade** step, then:
 
-1. Install the exact version (`npm install @appbasehq/react-native@VERSION`) and commit the lockfile. Pin exact versions; the npm `latest` tag can lag behind the newest release.
+1. Install the exact version (`npm install --save-exact @appbasehq/react-native@VERSION`) and commit the lockfile. Pin exact versions; the npm `latest` tag can lag behind the newest release.
 2. Run `pod install` (bare React Native) or rebuild the Expo development and production builds, since the package includes an iOS module.
 3. Launch a development build, confirm events still arrive in App setup, and ship an app update. Installed apps keep their old SDK until then.
 
@@ -11,6 +11,13 @@ Wire schema v1, stored identities and queued events carry over between all versi
 ## Unreleased
 
 Nothing yet.
+
+## 0.9.1 (2026-10-14)
+
+**Upgrade:** no code changes. The SDK code is identical to 0.9.0.
+
+- The package now includes this `CHANGELOG.md`.
+- The packaged guide links the [setup guide](https://appbase.so/docs/agent-setup.md) for accounts, labels hand-wired purchase calls as the path without the RevenueCat integration, and clarifies that paywall `accessState` may be `unknown`.
 
 ## 0.9.0 (2026-10-14)
 

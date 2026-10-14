@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.9.0**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.9.1**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.9.0
+npm install @appbasehq/react-native@0.9.1
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -24,7 +24,7 @@ The package is published under the Appbase-owned `@appbasehq` npm organization.
 Commit your app’s lockfile. SDK updates are deliberate dependency upgrades and require shipping an app update; deploying the dashboard does not change installed SDKs.
 The core has no runtime dependencies or private workspace imports. Native adapters are supplied by the host app. React Native 0.81 / Expo 54 on the iOS simulator is the tested native configuration; other supported peer versions require app validation.
 
-For SDK source development, follow the build and verification commands in the [source repository](https://github.com/appbasehq/appbase-react-native#build-and-verify-this-source). Package publication follows the [release guide](https://appbase.so/docs/sdk-release.md).
+For SDK source development, follow the build and verification commands in the [source repository](https://github.com/appbasehq/appbase-react-native#build-and-verify-this-source).
 
 Expo example (install compatible packages with `npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto`):
 
@@ -195,7 +195,8 @@ const view = await paywall.view({
 // When the user changes the selected plan:
 await view?.productSelected({ productId: 'pro_annual' });
 
-// Immediately before invoking the app's purchase flow:
+// Without the RevenueCat integration only (with it, use revenueCat.purchase instead):
+// immediately before invoking the app's purchase flow.
 const attempt = await view?.purchaseStarted({
   productId: 'pro_annual',
   offerId: 'trial_7d', // Optional actual offer identifier.
@@ -210,7 +211,7 @@ await view?.dismissed({ reason: 'purchased' });
 
 - `paywall({ id, version? })`: stable paywall ID and positive safe integer version (default `1`). Increment it for a changed design; versions are sent as strings. Configuration errors throw synchronously. There is no dashboard preregistration.
 - `view({ placement, accessState?, productIds?, onboarding?, properties? })`: returns a handle with `viewId`, or null if disabled, dropped or not persisted. Each call means a new presentation; do not call during each render. Products are exact store IDs, including base plans where applicable. Supply 1–20 unique IDs or omit the list when unknown. Selection/purchase IDs must belong to the list when supplied. The optional onboarding link snapshots its current attempt and flow/version; finishing onboarding does not erase it.
-- `accessState`: optional `active`, `inactive` or `unknown` snapshot immediately before presentation. Active includes paid/trial access. Omit when unknown; do not default to inactive. It is persisted as `paywall_access_state` with the view and later interactions, including after restart. Record subscriber views too: the backend excludes known active access from in-app acquisition conversion, while preserving history. Provider periods override an inactive snapshot; missing historical access makes the conversion rate unavailable. This is client evidence, not authorization. See `/docs/paywalls.md#existing-subscribers-and-eligibility`.
+- `accessState`: optional `active`, `inactive` or `unknown` snapshot immediately before presentation. Active includes paid/trial access. Pass `unknown` or omit it when access is not known; never default to inactive. It is persisted as `paywall_access_state` with the view and later interactions, including after restart. Record subscriber views too: the backend excludes known active access from in-app acquisition conversion, while preserving history. Provider periods override an inactive snapshot; missing historical access makes the conversion rate unavailable. This is client evidence, not authorization. See `/docs/paywalls.md#existing-subscribers-and-eligibility`.
 - `view.productSelected({ productId, offerId? })`: record an actual selection. Defaults need not generate a selection event; purchaseStarted always carries the purchased product explicitly.
 - `view.purchaseStarted({ productId, offerId? })`: returns a handle with `attemptId` and `productId`, or null. Call once per purchase invocation; retries by the customer are new attempts. At most 20 attempts per view.
 - `attempt.finished({ result, transactionId?, errorCode? })`: result is `pending`, `succeeded`, `cancelled` or `failed`. Pending can resolve later. Repeating an identical result is a no-op; changing a final result is rejected. Cancellation refers to the purchase dialog, independently of closing the paywall. Result events carry `result_source: 'client'`; they never prove a trial/payment alone. Pass the actual store transaction ID from the purchase result to enable exact matching against trusted RevenueCat billing. See `/docs/paywalls.md#verified-conversions`.
