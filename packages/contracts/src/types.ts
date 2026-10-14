@@ -73,6 +73,8 @@ export interface AppSetup {
   app: AppRecord;
   events: number;
   last_received_at: string | null;
+  /** Accounts linked by `identify`; zero suggests a forgotten call in an app with sign-in. */
+  identified_users?: number;
   usage: IngestionUsage;
 }
 export interface AppCredentials {
@@ -320,8 +322,14 @@ export interface TrendPoint {
   activities: number;
   paywall_views: number;
 }
+/** Optional dashboard label an app sent with `setProfile` for an identified account. */
+export interface PersonProfile {
+  email: string | null;
+  name: string | null;
+}
 export interface ObservedUser {
   subject: string;
+  profile?: PersonProfile | null;
   /** Owner-marked tester: browsable here, left out of Production reports. */
   is_tester: boolean;
   /** Latest safely linked RevenueCat profile country, not event-time location. */
@@ -331,6 +339,10 @@ export interface ObservedUser {
   first_in_period: string;
   last_seen: string;
   platforms: string[];
+  /** App version of the latest event in range. */
+  app_version?: string;
+  /** Latest detected build in range; `unknown` when no event in range detected one. */
+  runtime_environment?: RuntimeEnvironment;
 }
 export interface DashboardStats {
   granularity: ReportGranularity;
@@ -404,6 +416,7 @@ export interface FeaturePropertiesReport {
 }
 export interface Journey {
   subject: string;
+  profile?: PersonProfile | null;
   /** Owner-marked tester: browsable here, left out of Production reports. */
   is_tester: boolean;
   country_code: string | null;
@@ -425,6 +438,8 @@ export interface AcquisitionPoint {
   /** Verified trial start with an uncertain later outcome. */
   trial_unknown: number | null;
   first_purchase_cents: number | null;
+  /** Of `new_users`, those estimated from RevenueCat first-seen dates (owner opt-in). */
+  estimated_new_users?: number;
 }
 export interface AcquisitionProduct {
   date: string;
@@ -437,6 +452,17 @@ export interface AcquisitionProduct {
   trial_ended: number;
   trial_unknown: number;
   first_purchase_cents: number | null;
+}
+export interface AcquisitionPerson {
+  subject: string;
+  /** The series interval (`AcquisitionPoint.date`) of their first use. */
+  date: string;
+  /** No trial or verified purchase yet (or billing unavailable) is `none`. */
+  outcome:
+    'direct_paid' | 'trial_paid' | 'trial_pending' | 'trial_ended' | 'trial_unknown' | 'none';
+  /** First use dated by the owner-enabled RevenueCat estimate. */
+  estimated?: boolean;
+  profile?: PersonProfile | null;
 }
 export interface AcquisitionReport {
   new_user_definition: AcquisitionConfiguration;
@@ -460,6 +486,17 @@ export interface AcquisitionReport {
   series: AcquisitionPoint[];
   products: AcquisitionProduct[];
   first_purchase_cents: number | null;
+  /**
+   * Owner-enabled estimate: RevenueCat customers first seen in [from, to) count as Production new
+   * users before live SDK evidence begins (`to`). `users` is the lifetime count used; customers
+   * linked to more than one app person are left out (`ambiguous_customers`).
+   */
+  revenuecat_estimate?: { from: string; to: string; users: number; ambiguous_customers: number };
+  /**
+   * Each new user in range with their cohort interval and outcome, ordered by first use, so the
+   * Overview can name the person behind a dot. Null when the range has too many people to list.
+   */
+  people?: AcquisitionPerson[] | null;
   coverage: {
     unmatched_receipts: number;
     conflicting_receipts: number;
@@ -561,10 +598,28 @@ export interface FeedbackMessage extends FeedbackReceipt {
   app_version: string;
   status: 'new' | 'handled';
   subject: string | null;
+  profile?: PersonProfile | null;
 }
 export interface FeedbackInbox {
   items: FeedbackMessage[];
   new_count: number;
   handled_count: number;
   next_cursor: string | null;
+}
+
+/** Owner view of the RevenueCat first-seen estimate for one app (Production only). */
+export interface RevenueCatEstimateStatus {
+  enabled: boolean;
+  coverage_from: string | null;
+  connection: { id: string; name: string } | null;
+  /** The connection's RevenueCat project also feeds another app, so customers cannot be assigned. */
+  shared_connection: boolean;
+  /** Latest completed customer scan; first-seen dates exist only in scans since migration 034. */
+  scan: { completed_at: string; customers: number; with_first_seen: number } | null;
+  /** First day of live SDK new-user evidence; the estimate stops before it. */
+  live_since: string | null;
+  /** Eligible customers by first-seen month before `live_since` (testers and Sandbox-only removed). */
+  months: { month: string; customers: number }[];
+  /** Start of the latest run of months without a gap of over six months: a likely RevenueCat start. */
+  suggested_from: string | null;
 }

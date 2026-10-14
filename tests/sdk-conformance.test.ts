@@ -182,6 +182,9 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
           case 'identify':
             await sdk.identify(action.userId);
             break;
+          case 'profile.set':
+            await sdk.setProfile({ email: action.email, name: action.name });
+            break;
           case 'reset':
             await sdk.reset();
             break;

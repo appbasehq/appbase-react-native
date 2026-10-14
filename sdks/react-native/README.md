@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.8.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.9.0**. SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.8.0
+npm install @appbasehq/react-native@0.9.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -64,7 +64,7 @@ Each app has one collection key for every build. The SDK labels each event with 
 | App Store                                                                             | `production`          | Production  |
 | Anything that cannot tell (Android release, iOS 15, failed lookup)                    | `unknown`             | Production  |
 
-Metro resolves the package's React Native entry, which checks `__DEV__` and then asks the bundled iOS module for Apple's verified `AppTransaction.shared.environment`. The module is autolinked: run `pod install` (bare React Native) or rebuild your Expo development/production build (`npx expo prebuild` or EAS). Expo Go cannot load native modules, but it is always a debug build and records Development. Detection is bounded to 2.5 seconds, never calls `refresh()` and never asks for permissions or authentication. Pass `runtimeEnvironment` to override it, for example for an internal ad hoc build. Events already queued keep their original metadata, including an absent field; the field never changes identity or storage.
+Metro resolves the package's React Native entry, which checks `__DEV__` and then asks the bundled iOS module for Apple's verified `AppTransaction.shared.environment`. The module is autolinked: run `pod install` (bare React Native) or rebuild your Expo development/production build (`npx expo prebuild` or EAS). Expo Go cannot load native modules, but it is always a debug build and records Development. Detection is bounded to 2.5 seconds. After an `unknown` result, it asks again in the background about 5 seconds, 30 seconds, 2 minutes and 10 minutes later; later events carry the first detected answer, and reports give the install's earlier events that build. It never calls `refresh()` and never asks for permissions or authentication. Pass `runtimeEnvironment` to override it, for example for an internal ad hoc build. Events already queued keep their original metadata, including an absent field; the field never changes identity or storage.
 
 ## Automatic app opens
 
@@ -272,7 +272,7 @@ The callback is deliberate: analytics captures its identity **before** asking Re
 
 Returns the durable event ID, or null when disabled, stale, invalid, full, lookup-failed or not persisted. Identical consecutive project/customer links for the same analytics identity return the same ID, including after restart. This means recorded locally, not delivered or provider-verified. Events and deduplication state are saved atomically; offline retries preserve the original identity/time/event ID. A changed project/customer or a successful analytics identity change creates new evidence. Project/customer IDs are case-sensitive, opaque 1–255 characters without surrounding whitespace or control characters; do not use an email address as an account ID.
 
-**Account changes:** serialize your existing authentication and RevenueCat operations at the application level. After successful RevenueCat login, call analytics identify for that same app account, then sync. When switching accounts, reset analytics before identifying the next account; if a different identified user arrives without reset, `identify` resets first so nothing is credited to the previous account. After successful RevenueCat logout and analytics reset, sync the new anonymous ID. Sync again after restore and at initialization. Keep the lookup callback limited to reading the current ID; it should not log in/out or mutate analytics identity itself. The SDK cannot detect a RevenueCat-only account change that the app never communicates to analytics.
+**Account changes:** serialize your existing authentication and RevenueCat operations at the application level. After successful RevenueCat login, call analytics identify for that same app account, then sync. When switching accounts, reset analytics before identifying the next account; if a different identified user arrives without reset, `identify` resets first so nothing is credited to the previous account. On logout, reset analytics before RevenueCat logout so its new anonymous customer links to the new analytics identity; the integration links it on RevenueCat's update. Sync again after restore and at initialization. Keep the lookup callback limited to reading the current ID; it should not log in/out or mutate analytics identity itself. The SDK cannot detect a RevenueCat-only account change that the app never communicates to analytics.
 
 Do not substitute our anonymous UUID for RevenueCat's App User ID, automatically merge restored users, or change the app's RevenueCat authentication policy to use this helper. RevenueCat has its own anonymous/alias behavior. See [RevenueCat identity documentation](https://www.revenuecat.com/docs/customers/identifying-customers).
 
@@ -280,8 +280,9 @@ The resulting `revenuecat_identity_linked` event has `revenuecat_project_id`, `r
 
 ## Identity and collection controls
 
-- `identify('opaque-account-id')`: link anonymous history to an account. No email needed.
-- `reset()`: on logout/account switch, create a new anonymous ID and clear onboarding attempts, paywall handles and saved RevenueCat link deduplication. Previously queued events keep their original identity.
+- `identify('opaque-account-id')`: link anonymous history to an account. Use the permanent account ID after sign-up, sign-in and session restore, never an email, and do not identify guest or anonymous-auth accounts; see [apps with accounts](https://appbase.so/docs/agent-setup.md#apps-with-accounts).
+- `setProfile({ email, name })`: after `identify`, show this email and name for the account in the dashboard instead of its ID. Stored apart from events; each call replaces the profile and null/omitted fields clear. Ignored (with a diagnostic) before `identify`.
+- `reset()`: on logout (before RevenueCat `logOut()`)/account switch, create a new anonymous ID and clear onboarding attempts, paywall handles and saved RevenueCat link deduplication. Previously queued events keep their original identity.
 - `setEnabled(false)`: disable collection and clear the pending queue, onboarding attempts, paywall handles and saved RevenueCat link deduplication. Already sent requests cannot be recalled. Opt-out persists across restarts.
 - `setEnabled(true)`: resume future collection.
 - `flush()`: send queued events; concurrent calls share one request sequence.

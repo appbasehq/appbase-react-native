@@ -37,6 +37,7 @@ export const MOBILE_LIMITS = {
   retryAfterMaximumMs: 86400000,
   feedbackMessageLength: 4000,
   feedbackEmailLength: 254,
+  profileNameLength: 200,
   feedbackRequestBytes: 24576,
   maximumSafeInteger: 9007199254740991,
 } as const;

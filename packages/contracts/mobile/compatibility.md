@@ -6,6 +6,7 @@ Both SDK implementations target mobile contract v1. Package versions are indepen
 | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ---------------------------------------------------------- |
 | Durable queue, retry/ack, blocked state, storage rollback | Offline restart; partial/invalid/empty acknowledgements; rejection; rate limit; capacity; storage rollback | Implemented; shared runner                | Implemented; shared scenarios pass                         |
 | Identify/reset and consent                                | Identity reset; identity switch; consent restart                                                           | Implemented; shared runner                | Implemented; shared scenarios pass                         |
+| Account profile (`setProfile`)                            | Profile                                                                                                    | Implemented; shared runner                | Implemented; shared scenarios pass                         |
 | Local validation                                          | Invalid input; server validation vectors                                                                   | Implemented; canonical Zod + SDK checks   | Implemented; native checks + real API/Postgres             |
 | Onboarding and answer revisions                           | Onboarding answer revisions; fingerprint vectors                                                           | Implemented; shared runner                | Implemented; shared scenarios pass                         |
 | Paywall purchases and late outcomes                       | Pending result after dismissal/restart                                                                     | Implemented; shared runner                | Implemented; shared scenarios pass                         |
@@ -28,6 +29,8 @@ For a client-facing change:
 Never weaken validation to make a failing scenario pass without reviewing its intended behavior. Never remove historical payload compatibility just because the latest SDK changed. Breaking behavior requires an explicit migration/deprecation policy and a new contract boundary where appropriate. Server-only report changes usually need neither SDK release; platform fixes still run shared conformance to detect regressions.
 
 ## Acquisition migration
+
+React Native 0.9.0 and Swift 0.8.0 add `setProfile` (an identified account's email and name for the dashboard) as the `profile_updated` event in wire schema v1, and retry an Unknown build detection in the background. An API without migration 036 would store a profile as an ordinary event, email included; the hosted API has it. Storage and identities are unchanged, and upgrading needs no code change.
 
 React Native 0.8.0 and Swift 0.7.0 add the optional RevenueCat integration (`connectRevenueCat`): it links identity, reports access and records purchases through the existing public APIs, so wire schema v1, storage and recorded events are unchanged and no RevenueCat dependency is added.
 

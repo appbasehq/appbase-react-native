@@ -160,6 +160,21 @@ const paywallActions = [
   'paywall_purchase_result',
   'paywall_dismissed',
 ];
+/**
+ * `profile_updated` replaces the identified account's dashboard label. The server stores it apart
+ * from events; both fields are always sent and null clears one.
+ */
+export const profileEmailPattern = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
+export const profilePropertiesSchema = z
+  .object({
+    email: storable(
+      z.string().min(3).max(limits.feedbackEmailLength).regex(profileEmailPattern),
+    ).nullable(),
+    name: storable(z.string().min(1).max(limits.profileNameLength))
+      .refine((s) => s.trim() === s && !/[\u0000-\u001f\u007f]/.test(s), 'Trim the name')
+      .nullable(),
+  })
+  .strict();
 export const runtimeEnvironmentSchema = z.enum(['production', 'sandbox', 'development', 'unknown']);
 export const reportingEnvironmentSchema = z.enum(['production', 'sandbox', 'development']);
 export const eventSchema = z
@@ -206,6 +221,16 @@ export const eventSchema = z
         )
           ctx.addIssue({ code: 'custom', message: 'Answer does not match its declared question' });
       }
+    }
+    if (event.name === 'profile_updated') {
+      if (!profilePropertiesSchema.safeParse(event.properties).success)
+        ctx.addIssue({
+          code: 'custom',
+          message: 'A profile has a valid email and name, each possibly null',
+          path: ['properties'],
+        });
+      if (!event.user_id)
+        ctx.addIssue({ code: 'custom', message: 'A profile needs an identified user' });
     }
     if (event.name === 'revenuecat_identity_linked') {
       const parsed = revenuecatIdentityPropertiesSchema.safeParse(event.properties);
@@ -323,6 +348,12 @@ export const journeyParamsSchema = z.object({
 export const testerMarkSchema = journeyParamsSchema
   .pick({ subject: true })
   .extend({ is_tester: z.boolean() })
+  .strict();
+/** Owner deletes one person (an account with its linked history, or an unlinked install). */
+export const personDeletionSchema = journeyParamsSchema.pick({ subject: true }).strict();
+/** The app's backend deletes one account's analytics when that account is deleted. */
+export const serverPersonDeletionSchema = z
+  .object({ user_id: storable(z.string().min(1).max(limits.userIdLength)) })
   .strict();
 export const journeyCursorSchema = z
   .object({

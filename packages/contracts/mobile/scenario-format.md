@@ -11,6 +11,7 @@ Compare `expect.status` to the public `queued`, `dropped`, `enabled`, `blocked` 
 | `clock.set`                                                     | `now` ISO timestamp; change injected occurrence clock so retries must preserve older events                                            |
 | `track`                                                         | `name`, optional `properties`; invoke public capture API                                                                               |
 | `identify`                                                      | `userId`                                                                                                                               |
+| `profile.set`                                                   | `email`, `name`: string or null; invoke the public profile API (replaces the previous profile)                                         |
 | `reset`, `flush`, `resume`                                      | No arguments                                                                                                                           |
 | `setEnabled`                                                    | `enabled` boolean                                                                                                                      |
 | `storage.patch`                                                 | `fields`: merge legacy JSON fields into durable fixture storage, without changing live state                                           |

@@ -888,6 +888,63 @@
           "tags": ["朝", "🎉"]
         }
       }
+    },
+    {
+      "id": "profile-without-identified-user",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-0000000000f1",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "profile_updated",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "email": "sarah@example.com",
+          "name": "Sarah"
+        }
+      }
+    },
+    {
+      "id": "profile-invalid-email",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-0000000000f2",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "profile_updated",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "user_id": "customer-a",
+        "properties": {
+          "email": "not-an-email",
+          "name": null
+        }
+      }
+    },
+    {
+      "id": "profile-extra-field",
+      "valid": false,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-0000000000f3",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "profile_updated",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "user_id": "customer-a",
+        "properties": {
+          "email": null,
+          "name": null,
+          "phone": "555"
+        }
+      }
     }
   ]
 }

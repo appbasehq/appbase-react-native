@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "id": "profile",
+  "capability": "identity",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "profile.set",
+      "email": "sarah@example.com",
+      "name": "Sarah Chen"
+    },
+    {
+      "op": "identify",
+      "userId": "customer-a"
+    },
+    {
+      "op": "profile.set",
+      "email": "  sarah@example.com ",
+      "name": "Sarah Chen"
+    },
+    {
+      "op": "profile.set",
+      "email": "not-an-email",
+      "name": "Sarah"
+    },
+    {
+      "op": "profile.set",
+      "email": null,
+      "name": "  "
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:linked",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "identity_linked",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {},
+              "user_id": "customer-a"
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:profile",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "profile_updated",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "email": "sarah@example.com",
+                "name": "Sarah Chen"
+              },
+              "user_id": "customer-a"
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:cleared",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "profile_updated",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "email": null,
+                "name": null
+              },
+              "user_id": "customer-a"
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": ["invalid_event", "invalid_event"]
+  }
+}

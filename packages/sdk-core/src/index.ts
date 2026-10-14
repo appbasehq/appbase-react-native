@@ -58,6 +58,11 @@ export interface RevenueCatIdentityOptions {
   /** Called after capturing analytics identity. Pass () => Purchases.getAppUserID(). */
   getAppUserId: () => Promise<string>;
 }
+/** Dashboard label for the identified account. Each call replaces the previous profile. */
+export interface ProfileInput {
+  email?: string | null;
+  name?: string | null;
+}
 export interface OnboardingOptions {
   id: string;
   /** Positive safe integer (1, 2, …). String labels remain supported; omit for automatic versioning. */
@@ -87,6 +92,8 @@ export interface Onboarding {
   getState(): Promise<OnboardingAttempt | null>;
 }
 const RUNTIME_DETECTION_MS = 2500;
+/** After an Unknown detection, ask again in the background; StoreKit can answer late. */
+const RUNTIME_RETRY_MS = [5_000, 30_000, 120_000, 600_000];
 const runtimeEnvironments: readonly RuntimeEnvironment[] = [
   'production',
   'sandbox',
@@ -209,6 +216,9 @@ export class Analytics {
   private serial: Promise<unknown> = Promise.resolve();
   private inFlight: Promise<void> | null = null;
   private timer: ReturnType<typeof setInterval> | undefined;
+  private runtimeRetry: ReturnType<typeof setTimeout> | undefined;
+  /** Build at capture: explicit, detected, or a later retry's answer after Unknown. */
+  private runtime: RuntimeEnvironment | undefined;
   private cleanup: (() => void)[] = [];
   private disposed = false;
   private blocked = false;
@@ -228,6 +238,7 @@ export class Analytics {
   private constructor(private readonly options: AnalyticsOptions) {
     // Callers may reuse or mutate their configuration object after initialization.
     this.options = Object.freeze({ ...options });
+    this.runtime = options.runtimeEnvironment;
     let endpoint: URL;
     try {
       endpoint = new URL(options.apiUrl);
@@ -311,11 +322,9 @@ export class Analytics {
   }
 
   static async create(options: AnalyticsOptions): Promise<Analytics> {
-    if (options.runtimeEnvironment === undefined && options.detectRuntimeEnvironment)
-      options = {
-        ...options,
-        runtimeEnvironment: await detectRuntime(options.detectRuntimeEnvironment),
-      };
+    const detect =
+      options.runtimeEnvironment === undefined ? options.detectRuntimeEnvironment : undefined;
+    if (detect) options = { ...options, runtimeEnvironment: await detectRuntime(detect) };
     const client = new Analytics(options);
     options = client.options;
     const stored = await client.options.storage.getItem(client.key);
@@ -338,6 +347,7 @@ export class Analytics {
       client.state.events.push(client.event('app_first_open', {}));
       await options.storage.setItem(client.key, JSON.stringify(client.state));
     }
+    if (detect && client.runtime === 'unknown') client.retryRuntime(detect);
     const interval = options.flushIntervalMs ?? MOBILE_LIMITS.defaultFlushIntervalMs;
     if (interval > 0)
       client.timer = setInterval(() => {
@@ -428,11 +438,25 @@ export class Analytics {
       occurred_at: occurredAt,
       platform: this.options.platform,
       app_version: this.options.appVersion,
-      ...(this.options.runtimeEnvironment
-        ? { runtime_environment: this.options.runtimeEnvironment }
-        : {}),
+      ...(this.runtime ? { runtime_environment: this.runtime } : {}),
       properties: snapshotProperties(properties),
     };
+  }
+  /**
+   * Later events take the first detected answer; earlier events keep Unknown, and reports give
+   * them the install's nearest detected build. Captured events are never retagged.
+   */
+  private retryRuntime(detect: () => Promise<RuntimeEnvironment>, attempt = 0) {
+    if (this.disposed || attempt >= RUNTIME_RETRY_MS.length) return;
+    this.runtimeRetry = setTimeout(() => {
+      void detectRuntime(detect).then((value) => {
+        if (this.disposed) return;
+        if (value === 'unknown') this.retryRuntime(detect, attempt + 1);
+        else this.runtime = value;
+      });
+    }, RUNTIME_RETRY_MS[attempt]);
+    // Never keep a Node host alive for a background retry.
+    (this.runtimeRetry as { unref?: () => void }).unref?.();
   }
   private nextId(): string {
     const id = this.options.generateId();
@@ -497,9 +521,7 @@ export class Analytics {
       {
         platform: this.options.platform,
         app_version: this.options.appVersion,
-        ...(this.options.runtimeEnvironment
-          ? { runtime_environment: this.options.runtimeEnvironment }
-          : {}),
+        ...(this.runtime ? { runtime_environment: this.runtime } : {}),
         ...identity,
       },
       {
@@ -856,6 +878,52 @@ export class Analytics {
       });
     }
   }
+  /**
+   * Shows this email and name for the identified account in the dashboard, kept apart from
+   * events. Replaces the previous profile; omitted, null or blank fields are cleared. Requires
+   * `identify` first and is dropped with a diagnostic otherwise.
+   */
+  async setProfile(profile: ProfileInput): Promise<void> {
+    if (this.disposed) return;
+    const field = (value: unknown) => (typeof value === 'string' ? value.trim() || null : value);
+    const email = field(profile?.email ?? null),
+      name = field(profile?.name ?? null);
+    if (
+      (email !== null &&
+        (typeof email !== 'string' ||
+          email.length > MOBILE_LIMITS.feedbackEmailLength ||
+          !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(email) ||
+          !storableText(email))) ||
+      (name !== null &&
+        (typeof name !== 'string' ||
+          name.length > MOBILE_LIMITS.profileNameLength ||
+          /[\u0000-\u001f\u007f]/.test(name) ||
+          !storableText(name)))
+    ) {
+      this.diagnose({
+        code: 'invalid_event',
+        message: 'Use a valid email of up to 254 characters and a name of up to 200',
+      });
+      return;
+    }
+    try {
+      const occurredAt = this.clock().toISOString();
+      const identified = await this.update(() => {
+        if (!this.state.enabled) return true;
+        if (!this.state.userId) return false;
+        this.enqueue(this.event('profile_updated', { email, name }, occurredAt));
+        return true;
+      }, true);
+      if (!identified)
+        this.diagnose({
+          code: 'invalid_event',
+          message: 'Identify the user before setting a profile',
+        });
+      else if (this.state.events.length >= this.batchSize) void this.flush();
+    } catch {
+      this.diagnose({ code: 'storage', message: 'Could not persist profile' });
+    }
+  }
   async reset(): Promise<void> {
     if (this.disposed) return;
     await this.update(() => this.startAnonymousIdentity(), true);
@@ -1041,6 +1109,7 @@ export class Analytics {
   async dispose() {
     this.disposed = true;
     if (this.timer) clearInterval(this.timer);
+    clearTimeout(this.runtimeRetry);
     for (const remove of this.cleanup) remove();
     this.activeController?.abort();
     await this.inFlight;
