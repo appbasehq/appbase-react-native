@@ -19,9 +19,9 @@ on:
         type: choice
         options: [verify, publish]
       dist_tag:
-        description: 'npm channel; next keeps the current latest release unchanged'
+        description: 'npm channel; latest is what unpinned installs receive, next is for a prerelease'
         required: true
-        default: next
+        default: latest
         type: choice
         options: [next, latest]
 
