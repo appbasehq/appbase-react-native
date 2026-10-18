@@ -189,7 +189,8 @@ describe('answer helper delivery and definitions', () => {
     input.questions![0].options[0].label = 'New wording';
     expect(sdk.onboarding(input).definition.version).not.toBe(a);
     sdk.onboarding(definition());
-    expect(() => sdk.onboarding({ ...input, version: 1 })).toThrow('different questions');
+    // Question edits may keep an explicit version.
+    expect(() => sdk.onboarding({ ...input, version: 1 })).not.toThrow();
     expect(() =>
       sdk.onboarding({
         ...definition(),

@@ -469,7 +469,7 @@ describe('mobile onboarding helper', () => {
     expect(await resumed.start()).toBeNull();
     await second.dispose();
   });
-  it('generates stable versions and rejects redefinitions and invalid step sequences', async () => {
+  it('generates stable versions, warns on changed steps and rejects invalid step sequences', async () => {
     const diagnostics = vi.fn();
     const sdk = await createReactNativeAnalytics(options({ onDiagnostic: diagnostics }));
     const first = sdk.onboarding({ id: 'main', steps: ['intro', 'goal'] });
@@ -483,9 +483,10 @@ describe('mobile onboarding helper', () => {
     expect(
       sdk.onboarding({ id: 'explicit', version: 'v1', steps: ['legacy'] }).definition.version,
     ).toBe('v1');
-    expect(() => sdk.onboarding({ id: 'explicit', version: '1', steps: ['changed'] })).toThrow(
-      'different steps',
-    );
+    // A changed version never throws: it warns, and the server keeps both definitions.
+    expect(
+      sdk.onboarding({ id: 'explicit', version: '1', steps: ['changed'] }).definition.steps,
+    ).toEqual(['changed']);
     expect(() => sdk.onboarding({ id: 'invalid', steps: ['duplicate', 'duplicate'] })).toThrow(
       'unique',
     );
@@ -494,13 +495,132 @@ describe('mobile onboarding helper', () => {
     await first.step('goal'); // Skips the declared first step.
     await first.complete(); // Still incomplete.
     expect(diagnostics.mock.calls.map(([d]) => d.code)).toEqual([
+      'configuration',
       'invalid_event',
       'invalid_event',
       'invalid_event',
     ]);
+    expect(diagnostics.mock.calls[0][0].message).toContain('changed its steps');
     expect((await first.getState())?.nextStep).toBe(0);
     expect((await sdk.getStatus()).queued).toBe(2);
     await sdk.dispose();
+  });
+  it('keeps working when a version changes: question edits continue, changed steps restart unfinished attempts', async () => {
+    const store = storage(),
+      sent: AnalyticsEvent[] = [];
+    const question = (labels: string[]) => ({
+      id: 'goal',
+      stepId: 'goal',
+      title: 'Your goal?',
+      type: 'single' as const,
+      options: labels.map((label, i) => ({ id: `o${i}`, label })),
+    });
+    const open = async (onDiagnostic = vi.fn()) => ({
+      onDiagnostic,
+      sdk: await createReactNativeAnalytics(
+        options({
+          storage: store,
+          onDiagnostic,
+          fetch: async (_url, init) => {
+            sent.push(...decode(init));
+            return success(decode(init));
+          },
+        }),
+      ),
+    });
+    const v1 = await open();
+    const started = v1.sdk.onboarding({
+      id: 'main',
+      version: 3,
+      steps: ['intro', 'goal'],
+      questions: [question(['Habit'])],
+    });
+    const finished = v1.sdk.onboarding({ id: 'done', version: 1, steps: ['intro'] });
+    const attempt = await started.start();
+    await started.step('intro');
+    const done = await finished.start();
+    await finished.step('intro');
+    await finished.complete();
+    await v1.sdk.dispose();
+
+    // An added option: same version, same attempt, no warning.
+    const edited = await open();
+    const withOption = edited.sdk.onboarding({
+      id: 'main',
+      version: 3,
+      steps: ['intro', 'goal'],
+      questions: [question(['Habit', 'Sleep'])],
+    });
+    expect(await withOption.start()).toBe(attempt);
+    await withOption.step('goal');
+    await withOption.answer('goal', 'o1');
+    expect(edited.onDiagnostic).not.toHaveBeenCalled();
+    await edited.sdk.flush();
+    expect(sent.find((e) => e.name === 'onboarding_answered')).toMatchObject({
+      properties: { attempt_id: attempt, answer_ids: ['o1'] },
+      onboarding: { steps: ['intro', 'goal'] },
+    });
+    await edited.sdk.dispose();
+
+    // An added step: a warning, an unfinished attempt starts over, a finished one stays finished.
+    const changed = await open();
+    const withStep = changed.sdk.onboarding({
+      id: 'main',
+      version: 3,
+      steps: ['intro', 'goal', 'plan'],
+    });
+    const moreSteps = changed.sdk.onboarding({ id: 'done', version: 1, steps: ['intro', 'extra'] });
+    expect(changed.onDiagnostic.mock.calls.map(([d]) => d.code)).toEqual([
+      'configuration',
+      'configuration',
+    ]);
+    const restarted = await withStep.start();
+    expect(restarted).not.toBeNull();
+    expect(restarted).not.toBe(attempt);
+    expect(await moreSteps.start()).toBe(done);
+    expect(await moreSteps.getState()).toMatchObject({ attemptId: done, completed: true });
+    await changed.sdk.flush();
+    const restart = sent.find((e) => e.properties.attempt_id === restarted)!;
+    expect(restart.onboarding?.steps).toEqual(['intro', 'goal', 'plan']);
+    // A finished attempt is not started again.
+    expect(
+      sent.filter((e) => e.properties.attempt_id === done && e.name === 'onboarding_started'),
+    ).toHaveLength(1);
+    await changed.sdk.dispose();
+  });
+  it('reports server warnings once, on the console in development builds even with a handler', async () => {
+    const onDiagnostic = vi.fn();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const message = 'Onboarding "main" version 3 changed its steps without a new version.';
+    const respond = (init?: RequestInit) => {
+      const events = decode(init);
+      return Response.json({
+        accepted: events.map((e) => e.event_id),
+        rejected: [],
+        warnings: [{ event_id: events[0].event_id, message }],
+      });
+    };
+    try {
+      for (const runtimeEnvironment of ['development', 'production'] as const) {
+        const sdk = await createReactNativeAnalytics(
+          options({ runtimeEnvironment, onDiagnostic, fetch: async (_url, init) => respond(init) }),
+        );
+        for (let i = 0; i < 2; i++) {
+          await sdk.track('opened');
+          await sdk.flush();
+        }
+        expect((await sdk.getStatus()).queued).toBe(0);
+        await sdk.dispose();
+      }
+      expect(onDiagnostic).toHaveBeenCalledTimes(4);
+      expect(onDiagnostic).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'configuration', message }),
+      );
+      // Development prints it once; Production leaves it to the handler.
+      expect(warn).toHaveBeenCalledExactlyOnceWith(`[Appbase] ${message}`);
+    } finally {
+      warn.mockRestore();
+    }
   });
   it('does not advance an attempt when storage fails or the queue is full', async () => {
     const store = storage();

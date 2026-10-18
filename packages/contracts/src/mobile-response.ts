@@ -5,4 +5,6 @@ import { z } from 'zod';
 export const batchResultSchema = z.object({
   accepted: z.array(z.uuid()),
   rejected: z.array(z.object({ event_id: z.uuid().nullable(), reason: z.string() })),
+  /** Accepted events with a setup problem worth fixing. Older servers omit it. */
+  warnings: z.array(z.object({ event_id: z.uuid(), message: z.string() })).optional(),
 });

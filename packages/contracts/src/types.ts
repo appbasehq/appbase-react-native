@@ -15,13 +15,40 @@ export interface OnboardingDefinition {
   steps: string[];
   questions?: OnboardingQuestion[];
 }
-export interface OnboardingAnswerSummary extends OnboardingQuestion {
+/** Which report flow to read. `revision` picks a version whose steps changed without a new version. */
+export interface OnboardingFlowSelection {
+  id: string;
+  version: string;
+  revision?: number;
+}
+/** A question in a report: edits under the same version merge by question ID, step and type. */
+export interface OnboardingReportQuestion extends OnboardingQuestion {
+  /** First seen after this flow's first definition. */
+  added_at?: string;
+  /** Not in the newest definition; earlier answers stay counted. */
+  removed?: boolean;
+  options: { id: string; label: string; added_at?: string; removed?: boolean }[];
+}
+/**
+ * One funnel: a version and its step list. A version sent with different steps without a new
+ * version number appears again with `revision` (the first changed definition with those steps).
+ */
+export interface OnboardingReportFlow extends OnboardingDefinition {
+  revision?: number;
+  /** When this step list first arrived under this version. */
+  first_seen_at: string;
+  /** When the newest question/option edit merged into this flow first arrived. */
+  edited_at?: string;
+  questions?: OnboardingReportQuestion[];
+}
+export interface OnboardingAnswerSummary extends OnboardingReportQuestion {
   reached: number;
   answered: number;
   skipped: number;
   missing: number;
   conflicted: number;
-  options: (OnboardingQuestion['options'][number] & { count: number })[];
+  /** `eligible`: answered attempts whose definition offered this option (its percentage base). */
+  options: (OnboardingReportQuestion['options'][number] & { count: number; eligible: number })[];
 }
 export interface OnboardingAnswers {
   status: 'observed' | 'limited';
@@ -58,6 +85,8 @@ export interface AnalyticsEvent {
 export interface BatchResult {
   accepted: string[];
   rejected: { event_id: string | null; reason: string }[];
+  /** Accepted events with a setup problem worth fixing (absent from older servers). */
+  warnings?: { event_id: string; message: string }[];
 }
 export interface AppRecord {
   id: string;
@@ -75,6 +104,8 @@ export interface AppSetup {
   last_received_at: string | null;
   /** Accounts linked by `identify`; zero suggests a forgotten call in an app with sign-in. */
   identified_users?: number;
+  /** Onboarding versions whose steps changed without a new version number (newest first). */
+  changed_onboarding_versions?: { flow_id: string; version: string; changed_at: string }[];
   usage: IngestionUsage;
 }
 export interface AppCredentials {
@@ -107,8 +138,8 @@ export interface Report {
   totals: { events: number; active_users: number; last_received_at: string | null };
   onboarding: { label: string; count: number }[];
   onboarding_answers: OnboardingAnswers;
-  flows: OnboardingDefinition[];
-  flow: OnboardingDefinition | null;
+  flows: OnboardingReportFlow[];
+  flow: OnboardingReportFlow | null;
   retention: { cohort: string; users: number; d1: number | null; d7: number | null }[];
   paywalls: { placement: string; version: string; exposures: number; viewers: number }[];
   paywall_journeys: PaywallJourneys;
@@ -132,7 +163,10 @@ type ReportViewFields = {
   'app-health': Pick<Report, 'app_health'>;
   features: { dashboard: Pick<DashboardStats, 'features'> };
   audience: {
-    dashboard: Pick<DashboardStats, 'platforms' | 'versions' | 'total_users' | 'countries'>;
+    dashboard: Pick<
+      DashboardStats,
+      'platforms' | 'versions' | 'version_trend' | 'total_users' | 'countries'
+    >;
   };
   users: Pick<Report, 'recent'> & { dashboard: Pick<DashboardStats, 'users' | 'total_users'> };
   acquisition: Record<never, never>;
@@ -172,23 +206,42 @@ export interface RetentionCell {
   eligible: number;
   returned: number | null;
 }
+/**
+ * People who opened the app exactly `day` days after first use (1–30), of those whose return day
+ * has finished. Later days count fewer people, since only earlier starters can have reached them.
+ */
+export interface RetentionPoint {
+  day: number;
+  eligible: number;
+  returned: number | null;
+}
 export interface RetentionCohort {
   week: string;
   from: string;
   to: string;
   users: number;
   cells: RetentionCell[];
+  /** Every day 1–30; a day stays pending until the whole week's starters have reached it. */
+  curve: RetentionPoint[];
 }
 export interface AppHealthReport {
   new_user_definition: AcquisitionConfiguration;
   /** First matching configured event; not a promise of complete coverage. */
   new_user_since: string | null;
+  /**
+   * First day anyone was seen in this scope, in the app or through the app's backend (server
+   * events): when activity tracking began. Can precede `new_user_since`, for example when the
+   * backend reported before the app's release with Appbase. Absent in older responses.
+   */
+  activity_since?: string | null;
   activity_as_of: string | null;
   activity: AppHealthPoint[];
   retention: {
     users: number;
     summary: RetentionCell[];
     cohorts: RetentionCohort[];
+    /** Every day 1–30, weighted across first-use days like `summary`. */
+    curve: RetentionPoint[];
   };
 }
 
@@ -199,6 +252,8 @@ export interface PaywallConversions {
   direct_paid: number | null;
   trial_paid: number | null;
   trial_pending: number | null;
+  /** Auto-renew turned off during the trial: counted as unpaid. */
+  trial_cancelled: number | null;
   trial_ended: number | null;
   trial_unknown: number | null;
   paying_customers: number | null;
@@ -300,6 +355,8 @@ export interface PaywallJourneys {
     // Null for flows with no linked paywall history, or an incomplete behavior report.
     funnel: OnboardingPaywallFunnel | null;
   };
+  /** Design versions the owner retired; reports still count them, the card folds them away. */
+  retired: { paywall_id: string; version: string; retired_at: string }[];
   coverage: {
     legacy_views: number;
     invalid_link_views: number;
@@ -314,6 +371,23 @@ export interface StoredEvent extends AnalyticsEvent {
   source: string;
   subject: string;
 }
+/** An event the app's backend sent for an identified account (`POST /v1/server/events`). */
+export interface StoredServerEvent {
+  event_id: string;
+  user_id: string;
+  name: string;
+  occurred_at: string;
+  received_at: string;
+  source: 'server';
+  /** The person did it (counts toward active users) rather than it happening for them. */
+  active: boolean;
+  /** The sender's environment, or the account's nearest detected app build (Production without one). */
+  runtime_environment: 'production' | 'sandbox' | 'development';
+  properties: Properties;
+  subject: string;
+}
+/** A journey interleaves app events and server events by time. */
+export type JourneyEvent = StoredEvent | StoredServerEvent;
 export interface TrendPoint {
   date: string;
   active_users: number;
@@ -343,6 +417,42 @@ export interface ObservedUser {
   app_version?: string;
   /** Latest detected build in range; `unknown` when no event in range detected one. */
   runtime_environment?: RuntimeEnvironment;
+  /** Plan from verified billing (see `PersonPlan`); null when billing cannot tell. */
+  plan?: PersonPlan | null;
+  /** When the New users card counts them as new; null when it never does. */
+  new_user_at?: string | null;
+}
+/**
+ * A person's plan now, from verified billing through the RevenueCat customer linked to them
+ * alone: paying, in a trial, in a trial with auto-renew turned off (set to cancel), paid before
+ * but no longer (churned), a trial that ended unpaid, or free (linked, never purchased, with the
+ * app's billing history imported).
+ */
+export type PersonPlan =
+  'paid' | 'trial' | 'trial_set_to_cancel' | 'trial_canceled' | 'churned' | 'free';
+/** One person's story across all their history in the selected build environment. */
+export interface PersonSummary {
+  first_seen: string;
+  first_open: string | null;
+  last_seen: string;
+  /** Distinct UTC days with any app or server event. */
+  active_days: number;
+  /** Their latest onboarding attempt: finished, or the last step viewed. */
+  onboarding: {
+    flow_id: string | null;
+    flow_version: string | null;
+    completed: boolean;
+    last_step: string | null;
+  } | null;
+  /** The paywalls they saw most, up to three. */
+  paywalls: { paywall_id: string; views: number }[];
+  /** What the app reported: a completed purchase, or a purchase started without one. */
+  purchase: 'bought' | 'tapped' | null;
+  plan: PersonPlan | null;
+  /** Their most-used custom events, up to three. */
+  features: { name: string; count: number }[];
+  /** Feedback they sent, from any build. */
+  feedback: { count: number; last: string | null };
 }
 export interface DashboardStats {
   granularity: ReportGranularity;
@@ -350,6 +460,11 @@ export interface DashboardStats {
   first_opens: number;
   platforms: { label: string; users: number }[];
   versions: { label: string; users: number }[];
+  /**
+   * Intervals with app activity, each with its people and how many of them used each of the
+   * range's top versions (someone who updated within an interval counts under both).
+   */
+  version_trend: { date: string; users: number; versions: Record<string, number> }[];
   features: FeatureUsageReport;
   users: ObservedUser[];
   total_users: number;
@@ -378,13 +493,28 @@ export interface FeatureUsage {
   name: string;
   users: number;
   occurrences: number;
+  /**
+   * Where it was recorded: in the app, by the app's backend (server events), or both. Absent in
+   * older responses (app).
+   */
+  source?: 'app' | 'server' | 'both';
+  /** People by how many times each did it in the range; they add up to `users`. */
+  frequency: FeatureFrequency;
   /** Sparse reporting buckets. Empty elapsed buckets have zero users/occurrences. */
   series: FeaturePoint[];
+}
+export interface FeatureFrequency {
+  once: number;
+  two_to_three: number;
+  four_to_nine: number;
+  ten_or_more: number;
 }
 export interface FeatureUsageReport {
   items: FeatureUsage[];
   total_event_types: number;
   limit: number;
+  /** Events the owner hid from the Feature usage card; they are still counted above. */
+  hidden: { name: string; hidden_at: string }[];
 }
 export type FeatureProperty = {
   key: string;
@@ -422,8 +552,10 @@ export interface Journey {
   country_code: string | null;
   from: string;
   to: string;
-  events: StoredEvent[];
+  events: JourneyEvent[];
   next_cursor: string | null;
+  /** On the first page: their story across all their history; null when never seen. */
+  summary?: PersonSummary | null;
 }
 
 export interface AcquisitionPoint {
@@ -434,6 +566,8 @@ export interface AcquisitionPoint {
   direct_paid: number | null;
   trial_paid: number | null;
   trial_pending: number | null;
+  /** Still within the trial term with auto-renew turned off; counted as unpaid. */
+  trial_cancelled: number | null;
   trial_ended: number | null;
   /** Verified trial start with an uncertain later outcome. */
   trial_unknown: number | null;
@@ -449,6 +583,7 @@ export interface AcquisitionProduct {
   direct_paid: number;
   trial_paid: number;
   trial_pending: number;
+  trial_cancelled: number;
   trial_ended: number;
   trial_unknown: number;
   first_purchase_cents: number | null;
@@ -459,10 +594,29 @@ export interface AcquisitionPerson {
   date: string;
   /** No trial or verified purchase yet (or billing unavailable) is `none`. */
   outcome:
-    'direct_paid' | 'trial_paid' | 'trial_pending' | 'trial_ended' | 'trial_unknown' | 'none';
+    | 'direct_paid'
+    | 'trial_paid'
+    | 'trial_pending'
+    | 'trial_cancelled'
+    | 'trial_ended'
+    | 'trial_unknown'
+    | 'none';
   /** First use dated by the owner-enabled RevenueCat estimate. */
   estimated?: boolean;
   profile?: PersonProfile | null;
+}
+/** New users in range from one country (or Unknown) and what they became. */
+export interface AcquisitionCountry {
+  /** ISO 3166-1 alpha-2, or null when the person has no single observed country. */
+  country_code: string | null;
+  new_users: number;
+  /** Null without linked billing for the range, never zero. */
+  direct_paid: number | null;
+  trial_paid: number | null;
+  trial_pending: number | null;
+  trial_cancelled: number | null;
+  trial_ended: number | null;
+  trial_unknown: number | null;
 }
 export interface AcquisitionReport {
   new_user_definition: AcquisitionConfiguration;
@@ -497,6 +651,11 @@ export interface AcquisitionReport {
    * Overview can name the person behind a dot. Null when the range has too many people to list.
    */
   people?: AcquisitionPerson[] | null;
+  /**
+   * Owner dashboards: the range's new users by country (latest observed RevenueCat country of
+   * their linked customer; Unknown without one), most new users first.
+   */
+  countries?: AcquisitionCountry[];
   coverage: {
     unmatched_receipts: number;
     conflicting_receipts: number;
@@ -528,7 +687,13 @@ export interface RevenuePoint extends RevenueAmounts {
 export interface SubscriptionPoint {
   date: string;
   as_of: string | null;
-  products: { key: string; paid: number | null; trial: number | null }[];
+  /** `trial_cancelled`: of `trial`, those set to cancel (auto-renew turned off). */
+  products: {
+    key: string;
+    paid: number | null;
+    trial: number | null;
+    trial_cancelled: number | null;
+  }[];
 }
 export interface RevenueProduct {
   key: string;
@@ -538,6 +703,8 @@ export interface RevenueProduct {
   series: RevenuePoint[];
   active_paid: number | null;
   active_trials: number | null;
+  /** Of `active_trials`, those set to cancel (auto-renew turned off). */
+  active_trials_cancelled: number | null;
   display_name: string | null;
   duration: string | null;
   is_subscription?: boolean;

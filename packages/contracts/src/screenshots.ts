@@ -21,6 +21,14 @@ export const screenshotTargetSchema = z
     step: trackingLabel,
   })
   .strict();
+/** A paywall design version, the other thing a reference screenshot can show. */
+export const paywallScreenshotTargetSchema = z
+  .object({
+    id: z.uuid(),
+    paywall: trackingLabel,
+    version: trackingLabel,
+  })
+  .strict();
 export const screenshotMetadataSchema = z
   .object({
     platform: z.enum(['ios', 'android', 'other']).optional(),
@@ -53,4 +61,21 @@ export interface ScreenshotListing {
 export interface ScreenshotAccessState {
   access: { id: string; created_at: string; last_used_at: string | null } | null;
   token?: string;
+}
+export interface PaywallScreenshot extends ScreenshotMetadata {
+  id: string;
+  paywall_id: string;
+  version: string;
+  uploaded_at: string;
+  width: number;
+  height: number;
+  bytes: number;
+  thumbnail_bytes: number;
+}
+/** The paywall versions an app has shown (any build environment) and their references. */
+export interface PaywallScreenshotListing {
+  app: { id: string; name: string };
+  paywalls: { id: string; version: string; last_shown_at: string }[];
+  screenshots: PaywallScreenshot[];
+  available: boolean;
 }

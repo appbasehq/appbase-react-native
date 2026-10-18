@@ -131,6 +131,10 @@ function localHost({ hostname }: URL) {
 }
 // Stable non-security fingerprint. The server compares the full ordered definition,
 // so even a fingerprint collision cannot overwrite an existing version.
+const sameSteps = (
+  a: Pick<OnboardingDefinition, 'steps'>,
+  b: Pick<OnboardingDefinition, 'steps'>,
+) => JSON.stringify(a.steps) === JSON.stringify(b.steps);
 function automaticVersion(steps: readonly string[], questions: OnboardingDefinition['questions']) {
   let a = 0x811c9dc5,
     b = 0x9e3779b9;
@@ -234,6 +238,7 @@ export class Analytics {
   private identityRevision = 0;
   private definitions = new Map<string, OnboardingDefinition>();
   private onboardingHandles = new WeakSet<object>();
+  private warned = new Set<string>();
 
   private constructor(private readonly options: AnalyticsOptions) {
     // Callers may reuse or mutate their configuration object after initialization.
@@ -397,6 +402,20 @@ export class Analytics {
     return client;
   }
 
+  /**
+   * A setup problem worth fixing that loses no data. It goes to onDiagnostic; the console also
+   * gets it once in development builds (or with no handler), where the developer will see it.
+   */
+  private warn(d: Diagnostic) {
+    const handled = this.diagnose(d);
+    if ((handled && this.runtime !== 'development') || this.warned.has(d.message)) return;
+    this.warned.add(d.message);
+    try {
+      console.warn(`[Appbase] ${d.message}`);
+    } catch {
+      // A broken logger must not stop the app or analytics.
+    }
+  }
   private diagnose(d: Diagnostic): boolean {
     try {
       if (this.options.onDiagnostic) {
@@ -660,12 +679,13 @@ export class Analytics {
       throw new Error('Onboarding definition exceeds 16 KiB');
     const key = `${definition.id}/${definition.version}`;
     const previous = this.definitions.get(key) ?? this.state.onboarding?.[key]?.definition;
-    if (previous && JSON.stringify(previous.steps) !== JSON.stringify(definition.steps))
-      throw new Error('This onboarding version already has different steps; choose a new version');
-    if (previous && JSON.stringify(previous.questions ?? []) !== JSON.stringify(questions))
-      throw new Error(
-        'This onboarding version already has different questions; choose a new version',
-      );
+    // Never thrown: the app keeps working and the server keeps both definitions. Question edits
+    // may keep the version; changed steps are a separate funnel, so say so where it is seen.
+    if (previous && !sameSteps(previous, definition))
+      this.warn({
+        code: 'configuration',
+        message: `Onboarding "${definition.id}" version ${definition.version} changed its steps without a new version. Reports show the new steps separately; use a new version number when the steps change.`,
+      });
     if (!this.definitions.has(key) && this.definitions.size >= MOBILE_LIMITS.onboardingDefinitions)
       throw new Error('At most 100 onboarding definitions per SDK instance');
     this.definitions.set(key, definition);
@@ -683,7 +703,16 @@ export class Analytics {
         const result = await this.update(() => {
           if (!this.state.enabled) return null;
           const attempts = (this.state.onboarding ??= {});
-          let attempt = attempts[key];
+          let attempt: (typeof attempts)[string] | undefined = attempts[key];
+          // A saved attempt from a changed definition of this version: question edits keep it,
+          // changed steps start over unless it already finished.
+          if (attempt && attempt.definition !== definition) {
+            if (sameSteps(attempt.definition, definition) || attempt.completed)
+              attempt = { ...attempt, definition };
+            else attempt = undefined;
+            if (attempt) attempts[key] = attempt;
+            else delete attempts[key];
+          }
           if (kind === 'start' && attempt) return attempt.attemptId;
           if (kind === 'start' || kind === 'restart') {
             if (!attempt && Object.keys(attempts).length >= MOBILE_LIMITS.onboardingDefinitions)
@@ -1082,6 +1111,15 @@ export class Analytics {
             message: rejected.reason,
             eventId: rejected.event_id ?? undefined,
           });
+        // Accepted, but with a setup problem worth fixing (older servers send none).
+        if (Array.isArray(ack.warnings))
+          for (const warning of ack.warnings)
+            if (typeof warning?.message === 'string')
+              this.warn({
+                code: 'configuration',
+                message: warning.message.slice(0, 500),
+                eventId: typeof warning.event_id === 'string' ? warning.event_id : undefined,
+              });
         this.failures = 0;
         this.retryAt = 0;
       } catch {

@@ -1,0 +1,416 @@
+{
+  "version": 1,
+  "id": "onboarding-version-change",
+  "capability": "onboarding",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "onboarding.define",
+      "handle": "main",
+      "definition": {
+        "id": "welcome",
+        "version": "3",
+        "steps": ["intro", "goal"],
+        "questions": [
+          {
+            "id": "goal",
+            "stepId": "goal",
+            "title": "Your goal?",
+            "type": "single",
+            "options": [
+              {
+                "id": "o0",
+                "label": "Build a habit"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "onboarding.start",
+      "handle": "main"
+    },
+    {
+      "op": "onboarding.step",
+      "handle": "main",
+      "stepId": "intro"
+    },
+    {
+      "op": "onboarding.define",
+      "handle": "tour",
+      "definition": {
+        "id": "tour",
+        "version": "1",
+        "steps": ["intro"]
+      }
+    },
+    {
+      "op": "onboarding.start",
+      "handle": "tour"
+    },
+    {
+      "op": "onboarding.step",
+      "handle": "tour",
+      "stepId": "intro"
+    },
+    {
+      "op": "onboarding.complete",
+      "handle": "tour"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "onboarding.define",
+      "handle": "main",
+      "definition": {
+        "id": "welcome",
+        "version": "3",
+        "steps": ["intro", "goal"],
+        "questions": [
+          {
+            "id": "goal",
+            "stepId": "goal",
+            "title": "Your goal?",
+            "type": "single",
+            "options": [
+              {
+                "id": "o0",
+                "label": "Build a habit"
+              },
+              {
+                "id": "o1",
+                "label": "Sleep better"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "onboarding.start",
+      "handle": "main"
+    },
+    {
+      "op": "onboarding.step",
+      "handle": "main",
+      "stepId": "goal"
+    },
+    {
+      "op": "onboarding.answer",
+      "handle": "main",
+      "questionId": "goal",
+      "selection": "o1"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "onboarding.define",
+      "handle": "main",
+      "definition": {
+        "id": "welcome",
+        "version": "3",
+        "steps": ["intro", "goal", "plan"]
+      }
+    },
+    {
+      "op": "onboarding.define",
+      "handle": "tour",
+      "definition": {
+        "id": "tour",
+        "version": "1",
+        "steps": ["intro", "extra"]
+      }
+    },
+    {
+      "op": "onboarding.start",
+      "handle": "main"
+    },
+    {
+      "op": "onboarding.start",
+      "handle": "tour"
+    },
+    {
+      "op": "network",
+      "response": {
+        "kind": "ack",
+        "warnings": [
+          {
+            "index": 8,
+            "message": "Onboarding \"welcome\" version 3 changed its steps without a new version."
+          }
+        ]
+      }
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:mainStarted",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "onboarding_started",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "flow_id": "welcome",
+                "flow_version": "3",
+                "attempt_id": "$uuid:mainAttempt"
+              },
+              "onboarding": {
+                "id": "welcome",
+                "version": "3",
+                "steps": ["intro", "goal"],
+                "questions": [
+                  {
+                    "id": "goal",
+                    "stepId": "goal",
+                    "title": "Your goal?",
+                    "type": "single",
+                    "options": [
+                      {
+                        "id": "o0",
+                        "label": "Build a habit"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:mainIntro",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "onboarding_step_viewed",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "flow_id": "welcome",
+                "flow_version": "3",
+                "attempt_id": "$uuid:mainAttempt",
+                "step_id": "intro"
+              },
+              "onboarding": {
+                "id": "welcome",
+                "version": "3",
+                "steps": ["intro", "goal"],
+                "questions": [
+                  {
+                    "id": "goal",
+                    "stepId": "goal",
+                    "title": "Your goal?",
+                    "type": "single",
+                    "options": [
+                      {
+                        "id": "o0",
+                        "label": "Build a habit"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:tourStarted",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "onboarding_started",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "flow_id": "tour",
+                "flow_version": "1",
+                "attempt_id": "$uuid:tourAttempt"
+              },
+              "onboarding": {
+                "id": "tour",
+                "version": "1",
+                "steps": ["intro"]
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:tourIntro",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "onboarding_step_viewed",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "flow_id": "tour",
+                "flow_version": "1",
+                "attempt_id": "$uuid:tourAttempt",
+                "step_id": "intro"
+              },
+              "onboarding": {
+                "id": "tour",
+                "version": "1",
+                "steps": ["intro"]
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:tourCompleted",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "onboarding_completed",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "flow_id": "tour",
+                "flow_version": "1",
+                "attempt_id": "$uuid:tourAttempt"
+              },
+              "onboarding": {
+                "id": "tour",
+                "version": "1",
+                "steps": ["intro"]
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:mainGoal",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "onboarding_step_viewed",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "flow_id": "welcome",
+                "flow_version": "3",
+                "attempt_id": "$uuid:mainAttempt",
+                "step_id": "goal"
+              },
+              "onboarding": {
+                "id": "welcome",
+                "version": "3",
+                "steps": ["intro", "goal"],
+                "questions": [
+                  {
+                    "id": "goal",
+                    "stepId": "goal",
+                    "title": "Your goal?",
+                    "type": "single",
+                    "options": [
+                      {
+                        "id": "o0",
+                        "label": "Build a habit"
+                      },
+                      {
+                        "id": "o1",
+                        "label": "Sleep better"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:mainAnswer",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "onboarding_answered",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "flow_id": "welcome",
+                "flow_version": "3",
+                "attempt_id": "$uuid:mainAttempt",
+                "step_id": "goal",
+                "question_id": "goal",
+                "answer_ids": ["o1"],
+                "answer_status": "answered",
+                "answer_revision": 1
+              },
+              "onboarding": {
+                "id": "welcome",
+                "version": "3",
+                "steps": ["intro", "goal"],
+                "questions": [
+                  {
+                    "id": "goal",
+                    "stepId": "goal",
+                    "title": "Your goal?",
+                    "type": "single",
+                    "options": [
+                      {
+                        "id": "o0",
+                        "label": "Build a habit"
+                      },
+                      {
+                        "id": "o1",
+                        "label": "Sleep better"
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:mainRestarted",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "onboarding_started",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {
+                "flow_id": "welcome",
+                "flow_version": "3",
+                "attempt_id": "$uuid:changedAttempt"
+              },
+              "onboarding": {
+                "id": "welcome",
+                "version": "3",
+                "steps": ["intro", "goal", "plan"]
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": ["configuration", "configuration", "configuration"]
+  }
+}

@@ -35,7 +35,7 @@ Compare `expect.status` to the public `queued`, `dropped`, `enabled`, `blocked` 
 Transport response kinds:
 
 - `offline`: throw a transport error after recording the request.
-- `ack`: HTTP 200, optional `accepted` zero-based indices and `rejected` entries `{index,reason}` referring to the current request's events. An omitted accepted list acknowledges all events; an explicit empty list acknowledges none.
+- `ack`: HTTP 200, optional `accepted` zero-based indices, `rejected` entries `{index,reason}` and `warnings` entries `{index,message}` referring to the current request's events. An omitted accepted list acknowledges all events; an explicit empty list acknowledges none.
 - `http`: arbitrary HTTP `status`, optional `headers` and optional JSON `body` (default `{}`).
 - `raw`: arbitrary JSON response `body`, optional `status` (default 200) and `headers`, used for malformed acknowledgements.
 

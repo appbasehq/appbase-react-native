@@ -12,6 +12,13 @@ Wire schema v1, stored identities and queued events carry over between all versi
 
 Nothing yet.
 
+## 0.10.0 (2026-10-18)
+
+**Upgrade:** no code changes. If your app wrapped `onboarding()` to catch "different steps/questions" errors, that error no longer occurs.
+
+- A changed onboarding definition under the same `version` no longer throws from `onboarding()`. Question and option edits keep the version; changed steps report a `configuration` diagnostic, printed once to the console in development builds, and the server keeps both definitions. A saved attempt continues after a question edit and starts over after a step change unless it finished. See [onboarding versions](https://appbase.so/docs/sdk.md#onboarding-versions).
+- Server `warnings` in batch responses are reported as `configuration` diagnostics.
+
 ## 0.9.1 (2026-10-14)
 
 **Upgrade:** no code changes. The SDK code is identical to 0.9.0.

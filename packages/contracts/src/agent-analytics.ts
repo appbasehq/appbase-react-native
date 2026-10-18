@@ -37,6 +37,8 @@ export const agentReportQuerySchema = z
     compare: z.literal('previous_period').optional(),
     flow_id: label.optional(),
     flow_version: label.optional(),
+    /** A version whose steps changed without a new version number (listed in the catalog). */
+    flow_revision: z.coerce.number().int().min(2).max(999_999_999).optional(),
   })
   .strict()
   .superRefine((q, ctx) => {
@@ -51,6 +53,11 @@ export const agentReportQuerySchema = z
       ctx.addIssue({ code: 'custom', message: 'The comparison must start in 1970 or later' });
     if (Boolean(q.flow_id) !== Boolean(q.flow_version))
       ctx.addIssue({ code: 'custom', message: 'Supply both flow_id and flow_version' });
+    if (q.flow_revision !== undefined && !q.flow_id)
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Supply flow_revision with flow_id and flow_version',
+      });
   });
 export interface AnalyticsMetric {
   value: number | null;

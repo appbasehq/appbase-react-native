@@ -4,7 +4,7 @@ export { MOBILE_LIMITS, MOBILE_CONTRACT_VERSION } from './mobile-constants.js';
 export { feedbackSubmissionSchema, feedbackReceiptSchema } from './mobile-feedback.js';
 export { batchResultSchema } from './mobile-response.js';
 import { revenuecatIdentityPropertiesSchema } from './revenuecat.js';
-import type { AnalyticsEvent } from './types.js';
+import type { AnalyticsEvent, JourneyEvent, StoredServerEvent } from './types.js';
 export type * from './types.js';
 export * from './revenuecat.js';
 export * from './reporting.js';
@@ -175,6 +175,16 @@ export const profilePropertiesSchema = z
       .nullable(),
   })
   .strict();
+const eventName = z
+  .string()
+  .regex(new RegExp(`^[a-z][a-z0-9_.]{0,${limits.eventNameLength - 1}}$`));
+const eventProperties = z
+  .record(storable(z.string().min(1).max(limits.propertyKeyLength)), property)
+  .refine((p) => Object.keys(p).length <= limits.propertyCount, 'Too many properties')
+  .refine(
+    (p) => new TextEncoder().encode(JSON.stringify(p)).length <= limits.propertiesBytes,
+    'Properties exceed 8 KiB',
+  );
 export const runtimeEnvironmentSchema = z.enum(['production', 'sandbox', 'development', 'unknown']);
 export const reportingEnvironmentSchema = z.enum(['production', 'sandbox', 'development']);
 export const eventSchema = z
@@ -184,18 +194,12 @@ export const eventSchema = z
     installation_id: z.uuid(),
     anonymous_id: z.uuid(),
     user_id: storable(z.string().min(1).max(limits.userIdLength)).optional(),
-    name: z.string().regex(new RegExp(`^[a-z][a-z0-9_.]{0,${limits.eventNameLength - 1}}$`)),
+    name: eventName,
     occurred_at: z.iso.datetime({ offset: true }),
     platform: z.enum(['ios', 'android', 'test']),
     app_version: storable(z.string().min(1).max(limits.appVersionLength)),
     runtime_environment: runtimeEnvironmentSchema.optional(),
-    properties: z
-      .record(storable(z.string().min(1).max(limits.propertyKeyLength)), property)
-      .refine((p) => Object.keys(p).length <= limits.propertyCount, 'Too many properties')
-      .refine(
-        (p) => new TextEncoder().encode(JSON.stringify(p)).length <= limits.propertiesBytes,
-        'Properties exceed 8 KiB',
-      ),
+    properties: eventProperties,
     onboarding: onboardingDefinitionSchema.optional(),
   })
   .strict()
@@ -349,12 +353,85 @@ export const testerMarkSchema = journeyParamsSchema
   .pick({ subject: true })
   .extend({ is_tester: z.boolean() })
   .strict();
+/** Setup access marks an account the agent already knows (the owner's or a test account). */
+export const agentTesterMarkSchema = z
+  .object({ user_id: storable(z.string().min(1).max(limits.userIdLength)), is_tester: z.boolean() })
+  .strict();
+/** Owner retires (or restores) one paywall design version; the Paywalls card folds it away. */
+export const paywallRetirementSchema = z
+  .object({ paywall_id: trackingLabel, version: trackingLabel, retired: z.boolean() })
+  .strict();
+/** Owner hides or shows a custom event on the Feature usage card. */
+export const featureHiddenSchema = z.object({ event: eventName, hidden: z.boolean() }).strict();
 /** Owner deletes one person (an account with its linked history, or an unlinked install). */
 export const personDeletionSchema = journeyParamsSchema.pick({ subject: true }).strict();
 /** The app's backend deletes one account's analytics when that account is deleted. */
 export const serverPersonDeletionSchema = z
   .object({ user_id: storable(z.string().min(1).max(limits.userIdLength)) })
   .strict();
+/**
+ * Names server events cannot use: the app's own lifecycle, identity, onboarding, paywall and
+ * billing evidence comes only from the SDK or verified billing providers.
+ */
+export const serverReservedEventNames = [
+  'app_first_open',
+  'app_active',
+  'identity_linked',
+  'activity_completed',
+] as const;
+export const serverReservedEventPrefixes = [
+  'onboarding_',
+  'paywall_',
+  'subscription_',
+  'revenuecat_',
+] as const;
+/**
+ * One event from the app's backend about an identified account. `event_id` is the sender's own
+ * idempotency key (a UUID or any stable text such as `transcription:memo_123`); `active` says
+ * whether the person did it (counts toward active users) or it happened for them.
+ * `profile_updated` sets the account's dashboard label, as the SDK's setProfile does.
+ */
+export const serverEventSchema = z
+  .object({
+    event_id: z
+      .string()
+      .regex(/^[\x21-\x7e]{1,200}$/, 'Use 1–200 visible ASCII characters, no spaces'),
+    user_id: storable(z.string().min(1).max(limits.userIdLength)),
+    name: eventName,
+    occurred_at: z.iso.datetime({ offset: true }).optional(),
+    active: z.boolean().optional(),
+    environment: z.enum(['production', 'development']).optional(),
+    properties: eventProperties.optional(),
+  })
+  .strict()
+  .superRefine((event, ctx) => {
+    if (
+      (serverReservedEventNames as readonly string[]).includes(event.name) ||
+      serverReservedEventPrefixes.some((prefix) => event.name.startsWith(prefix))
+    )
+      ctx.addIssue({
+        code: 'custom',
+        message: `${event.name} is sent by the app's SDK, not a server`,
+        path: ['name'],
+      });
+    if (event.name === 'profile_updated') {
+      if (!profilePropertiesSchema.safeParse(event.properties ?? {}).success)
+        ctx.addIssue({
+          code: 'custom',
+          message: 'A profile has a valid email and name, each possibly null',
+          path: ['properties'],
+        });
+    } else if (event.active === undefined)
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Set active: true when the person did this, false when it happened for them',
+        path: ['active'],
+      });
+  });
+export type ServerEvent = z.infer<typeof serverEventSchema>;
+/** Whether a journey event came from the app's backend rather than the app. */
+export const isServerEvent = (event: JourneyEvent): event is StoredServerEvent =>
+  event.source === 'server';
 export const journeyCursorSchema = z
   .object({
     at: z.iso.datetime(),

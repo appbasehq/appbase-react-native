@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.9.1**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.10.0**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -16,7 +16,7 @@ Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
 Install the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.9.1
+npm install @appbasehq/react-native@0.10.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -112,9 +112,7 @@ await onboarding.step('notifications');
 await onboarding.complete();
 ```
 
-Use positive whole numbers (`1`, `2`, …) for explicit onboarding versions, up to `Number.MAX_SAFE_INTEGER`. Increment the version when you want separate results for a changed flow; it is independent of the app release version. The SDK normalizes numbers to strings in `definition`, saved attempts and event payloads, so `1` and `'1'` refer to the same version. Existing string labels remain supported; `'v1'` is a distinct version and its history is preserved. Omit `version` to derive it automatically from the ordered step IDs.
-
-Define the flow once in app code. Every emitted event includes its immutable definition; the server registers it automatically and the web report appears without setup fields. A version can never be overwritten with different steps or questions. Automatic versions detect step and question/option changes; explicit versions must be incremented for those changes. Existing flows without questions keep their original automatic version.
+Define the flow once in app code. Every emitted event includes its definition; the server registers it automatically and the web report appears without setup fields. Increment `version` when the steps change; see [onboarding versions](#onboarding-versions).
 
 - `start(properties?)`: start once or resume the saved attempt. Returns its ID, or null when disabled/dropped/failed. Repeated calls, including after completion, do not restart it.
 - `restart(properties?)`: explicitly start a new attempt.
@@ -126,7 +124,17 @@ Define the flow once in app code. Every emitted event includes its immutable def
 
 Attempts and events are saved together in the existing storage/outbox. A queue/storage failure does not advance progress. Resetting identity or disabling collection clears saved attempts. Calling start after re-enabling begins a new attempt. Reports credit progress, answers and completion to the attempt's start date whenever they happen, so resuming an older attempt days later still counts. This version supports linear flows with 1–20 unique step labels and at most 100 definitions per app. IDs/versions/steps use 1–80 letters, numbers, dots, dashes or underscores, starting with a letter or number.
 
-Configuration mistakes in `onboarding({...})` throw synchronously. Runtime tracking mistakes or storage failures are reported through onDiagnostic. Do not let analytics failures block the product flow.
+Configuration mistakes in `onboarding({...})` (invalid IDs, steps or questions) throw synchronously; a changed version does not. Runtime tracking mistakes or storage failures are reported through onDiagnostic. Do not let analytics failures block the product flow.
+
+### Onboarding versions
+
+Use positive whole numbers (`1`, `2`, …) for `version`, up to `Number.MAX_SAFE_INTEGER`, independent of the app release version. The SDK normalizes numbers to strings in `definition`, saved attempts and event payloads, so `1` and `'1'` refer to the same version. Existing string labels remain supported; `'v1'` is a distinct version and its history is preserved.
+
+**Increment the version when you add, remove, rename or reorder steps**, or when you redesign screens and want them measured separately. Editing questions, options or their wording can keep the version: reports merge them by question and option ID, show the newest wording, and date added or removed options. An added option's percentage counts only the attempts that were offered it.
+
+Forgetting to increment never loses events or breaks the app. If a version's steps change without a new number, the server keeps both definitions and reports show the new steps as a separate funnel, labelled with the date they changed. The SDK reports a `configuration` diagnostic, which is also printed once to the console in development builds (or when no `onDiagnostic` is set), and App setup and the [agent setup status](https://appbase.so/docs/agent-setup.md#verify-delivery) list the version. On a device with a saved attempt, a question edit continues it; changed steps start a new attempt unless the saved one already finished.
+
+Omit `version` to derive one automatically from the steps and questions; then any question or option change, including wording, starts a new version. Existing flows without questions keep their original automatic version.
 
 ### Single- and multiple-choice answers
 

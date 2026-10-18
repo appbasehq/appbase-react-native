@@ -139,6 +139,14 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
           event_id: events[entry.index].event_id,
           reason: entry.reason,
         })),
+        ...(response.warnings
+          ? {
+              warnings: response.warnings.map((entry: { index: number; message: string }) => ({
+                event_id: events[entry.index].event_id,
+                message: entry.message,
+              })),
+            }
+          : {}),
       });
     };
     const options: AnalyticsOptions = {
