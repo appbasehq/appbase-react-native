@@ -97,10 +97,22 @@ export interface AppRecord {
   flow_id: string;
   flow_version: string;
   flow_steps: string[];
+  /** Chosen in the setup flow: in the App Store, or not released yet. Null for older apps. */
+  release_status?: 'live' | 'unreleased' | null;
+  app_store_id?: string | null;
+  bundle_id?: string | null;
+  /** Set when the app has an icon; also versions its URL. */
+  icon_updated_at?: string | null;
+  /** Null while the setup flow is unfinished; set for apps created before the flow. */
+  setup_completed_at?: string | null;
 }
 export interface AppSetup {
   app: AppRecord;
   events: number;
+  /** Whether the app has ever sent each kind of data, from any build (cards' empty states). */
+  tracked?: { onboarding: boolean; paywalls: boolean; features: boolean; feedback: boolean };
+  /** Lifetime events per dashboard build environment (Production includes undetected builds). */
+  events_by_environment?: { production: number; sandbox: number; development: number };
   last_received_at: string | null;
   /** Accounts linked by `identify`; zero suggests a forgotten call in an app with sign-in. */
   identified_users?: number;
@@ -147,12 +159,164 @@ export interface Report {
   dashboard: DashboardStats;
   app_health: AppHealthReport;
   acquisition: AcquisitionReport;
+  /** Production only, and only when the app has an ad account connected; absent otherwise. */
+  ad_spend?: AdSpendReport;
   revenue: RevenueReport;
+}
+
+/** Totals for a range or one interval. Amounts are in the ad account's currency (major units). */
+export interface AdSpendTotals {
+  spend: number | null;
+  /** `spend` in USD at each day's ECB reference rate (the latest of the previous week on days
+   * without one). Null when a day with spend has no rate. Not on campaigns. */
+  spend_usd?: number | null;
+  impressions: number | null;
+  clicks: number | null;
+  /** The ad provider's own attributed results, as it reports them; not Appbase measurements. */
+  reported_installs: number | null;
+  reported_trials: number | null;
+}
+export interface AdSpendPoint extends AdSpendTotals {
+  date: string;
+}
+export interface AdSpendCampaign extends AdSpendTotals {
+  id: string;
+  name: string;
+}
+/**
+ * What a connected ad account spent, per UTC interval, beside the app's own new users. Spend is
+ * not attribution: no person is linked to an ad, and new users include people who never saw one.
+ * Intervals before `covered_from` (or before the first copy finishes) are null, not zero.
+ */
+export interface AdSpendReport {
+  provider: 'meta';
+  /** `pending`: the first copy has not finished. `failing`: the last copy failed; data may be old. */
+  status: 'ready' | 'pending' | 'credentials_failed' | 'failing';
+  account: { id: string; name: string | null; currency: string; timezone: string };
+  /** Only campaigns promoting this provider app count; null counts the whole account. */
+  promoted_app: { id: string; name: string | null } | null;
+  synced_at: string | null;
+  covered_from: string | null;
+  /** Some selected dates fall before `covered_from`. */
+  partial_range: boolean;
+  total: AdSpendTotals;
+  series: AdSpendPoint[];
+  /** Highest spend first, at most 50. */
+  campaigns: AdSpendCampaign[];
+  /** Spend against what new users from days with ad spend paid, before store fees; see
+   * `AdReturnReport`. Absent from older responses. */
+  ad_return?: AdReturnReport;
+  /** The same after store commission and tax (Apple's 15% for Small Business Program members). */
+  ad_return_after_fees?: AdReturnReport;
+  /** The owner's saved choices (App setup / the card): which one to show, and Small Business. */
+  fee_settings?: { ad_return_after_fees: boolean; apple_small_business: boolean };
+}
+/**
+ * Ad return, counting only new users who first used the app on a day with ad spend (UTC). New
+ * users on days without ads are reported in `excluded` and `paid_without_ads`, never counted.
+ * Money is USD first payments, before store fees or after commission and tax (`fees`). Running
+ * trials are valued at full price, as if every one pays: a ceiling, not a prediction.
+ */
+export interface AdReturnReport {
+  basis: 'ad_days';
+  /** Money before store fees (as Revenue) or after commission and tax. */
+  fees: 'before' | 'after';
+  points: {
+    date: string;
+    /** USD spend; null where spend or its exchange rate is unknown. */
+    spend: number | null;
+    paid: number | null;
+    /** Paid by this interval's new users on days without ad spend: shown, not counted. */
+    paid_without_ads: number | null;
+    /** What this interval's running trials pay if every one converts, at full price. */
+    trial_value: number | null;
+    /** Trials still running (auto-renew on) among this interval's ad-day new users. */
+    trials: number;
+    /** Trials set to cancel among them: not counted in `trial_value`. */
+    cancelled_trials: number;
+  }[];
+  total: {
+    spend: number | null;
+    paid: number | null;
+    trial_value: number | null;
+    running_trials: number;
+    cancelled_trials: number;
+    new_users: number | null;
+    trial_starters: number | null;
+    payers: number | null;
+  };
+  /** Days in the range with no ad spend, and what their new users paid (not counted). */
+  excluded: { days: number; new_users: number | null; paid: number | null };
+  /**
+   * Full prices behind `trial_value`. A running trial counts at the latest price its plan was
+   * paid in the trial's currency (USD, last 365 days, no trial or intro payments); without one in
+   * that currency, the plan's average payment; for a plan never paid, the average across plans.
+   */
+  prices: {
+    /** Latest full payment per plan and currency, before fees and after commission and tax. */
+    by_currency: {
+      product: string;
+      currency: string;
+      price: number;
+      kept: number | null;
+      paid_at: string;
+    }[];
+    /** Average full payment per plan, for trials in a currency it has no payment in. */
+    products: { product: string; price: number; kept: number | null; payments: number }[];
+    fallback_price: number | null;
+    fallback_kept: number | null;
+  };
+  return_so_far: number | null;
+  /** (paid + trial_value) ÷ spend: the return if every running trial pays. */
+  return_if_trials_pay: number | null;
+}
+
+/** An app's ad account connection as App setup shows it; the token is never returned. */
+export interface AdConnectionStatus {
+  provider: 'meta';
+  account: { id: string; name: string | null; currency: string; timezone: string };
+  promoted_app: { id: string; name: string | null } | null;
+  status: 'active' | 'credentials_failed';
+  /** A copy is wanted or running. */
+  syncing: boolean;
+  synced_at: string | null;
+  covered_from: string | null;
+  last_error: string | null;
+  connected_at: string;
+  /** The owner's other apps counting the same spend: same ad account, and either one counts the
+   * whole account or both count the same promoted app. */
+  overlaps?: { app_id: string; app_name: string; whole_account: boolean }[];
+}
+/** App setup's ad spend state: this app's connection and the owner's reusable saved tokens. */
+export interface AdSpendSetup {
+  connections: AdConnectionStatus[];
+  providers: 'meta'[];
+  /** The owner's other apps with a working Meta token this app can reuse (sent as `from_app_id`),
+   * with the ad account and promoted app each counts (null: the whole account). */
+  reusable: {
+    app_id: string;
+    app_name: string;
+    account_id: string;
+    account_name: string | null;
+    promoted_app_id: string | null;
+  }[];
+}
+/** An ad account the token can read, with the provider apps its campaigns promote. */
+export interface AdAccountChoice {
+  id: string;
+  name: string | null;
+  currency: string | null;
+  timezone: string | null;
+  active: boolean;
+  /** Spend in the last 30 days (Meta's `last_30d`, account currency); null when unreadable. */
+  spend_30d: number | null;
+  /** Each promoted app, with what its campaigns spent in the same 30 days. */
+  apps: { id: string; name: string | null; spend_30d: number | null }[];
 }
 
 /** A selected report omits unrelated fields; omission never means measured zero. */
 type ReportViewFields = {
-  'new-business': Pick<Report, 'acquisition'>;
+  'new-business': Pick<Report, 'acquisition' | 'ad_spend'>;
   revenue: Pick<Report, 'revenue'>;
   subscriptions: Pick<Report, 'revenue'>;
   onboarding: Pick<
@@ -572,13 +736,20 @@ export interface AcquisitionPoint {
   /** Verified trial start with an uncertain later outcome. */
   trial_unknown: number | null;
   first_purchase_cents: number | null;
+  /** What the developer keeps of `first_purchase_cents` after store commission and tax
+   * (RevenueCat's per-payment percentages). Null when unknown; absent from older responses. */
+  first_purchase_proceeds_cents?: number | null;
   /** Of `new_users`, those estimated from RevenueCat first-seen dates (owner opt-in). */
   estimated_new_users?: number;
+  /** Of `new_users`, RevenueCat customers since the first live day the app has not linked yet. */
+  revenuecat_only_new_users?: number;
 }
 export interface AcquisitionProduct {
   date: string;
   store: string;
   trial_product: string | null;
+  /** The trial's store currency (from its start), which prices running trials in Ad return. */
+  trial_currency?: string | null;
   paid_product: string | null;
   direct_paid: number;
   trial_paid: number;
@@ -603,6 +774,8 @@ export interface AcquisitionPerson {
     | 'none';
   /** First use dated by the owner-enabled RevenueCat estimate. */
   estimated?: boolean;
+  /** A RevenueCat customer the app has not linked to a person yet, dated by RevenueCat. */
+  revenuecat_only?: boolean;
   profile?: PersonProfile | null;
 }
 /** New users in range from one country (or Unknown) and what they became. */
@@ -640,12 +813,21 @@ export interface AcquisitionReport {
   series: AcquisitionPoint[];
   products: AcquisitionProduct[];
   first_purchase_cents: number | null;
+  /** First payments after store commission and tax; see `AcquisitionPoint`. */
+  first_purchase_proceeds_cents?: number | null;
   /**
    * Owner-enabled estimate: RevenueCat customers first seen in [from, to) count as Production new
    * users before live SDK evidence begins (`to`). `users` is the lifetime count used; customers
    * linked to more than one app person are left out (`ambiguous_customers`).
    */
   revenuecat_estimate?: { from: string; to: string; users: number; ambiguous_customers: number };
+  /**
+   * Production, from the first live SDK new-user day: RevenueCat customers the app has not linked
+   * to a person (for example their link is still queued on the phone) count as new users on
+   * RevenueCat's first-seen date, or their first purchase when they joined after the customer list
+   * (`customer_list_at`). `users` is the lifetime count. Once linked they are that person instead.
+   */
+  revenuecat_only?: { users: number; customer_list_at: string | null };
   /**
    * Each new user in range with their cohort interval and outcome, ordered by first use, so the
    * Overview can name the person behind a dot. Null when the range has too many people to list.

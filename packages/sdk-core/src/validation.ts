@@ -275,7 +275,7 @@ export function validStoredState(value: unknown): boolean {
   const link = value.revenuecatIdentity;
   if (
     record(link) &&
-    (!validProviderId(link.projectId) ||
+    ((link.projectId !== undefined && !validProviderId(link.projectId)) ||
       !validProviderId(link.appUserId) ||
       !validUuid(link.eventId))
   )

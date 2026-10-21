@@ -29,7 +29,7 @@ Compare `expect.status` to the public `queued`, `dropped`, `enabled`, `blocked` 
 | `paywall.dismiss`                                               | `view`, `reason`; success must return true                                                                                             |
 | `paywall.resumeView`                                            | `handle`, `view`; use remembered view ID through public lookup                                                                         |
 | `paywall.resumePurchase`                                        | `view`, `purchase`; use remembered attempt ID through public lookup                                                                    |
-| `revenuecat.link`                                               | `projectId`, `appUserId`; provide callback returning that ID and require valid returned event UUID                                     |
+| `revenuecat.link`                                               | optional `projectId`, `appUserId`; provide callback returning that ID and require valid returned event UUID                            |
 | `feedback.submit`                                               | `input`, optional `expectError` code; successful receipt must match submission ID and include valid timestamp; errors must preserve ID |
 
 Transport response kinds:

@@ -61,7 +61,9 @@ export const revenuecatAppUserIdSchema = z
   .refine((s) => s.trim() === s && !/[\u0000-\u001f\u007f\uD800-\uDFFF]/u.test(s));
 export const revenuecatIdentityPropertiesSchema = z
   .object({
-    revenuecat_project_id: revenuecatAppUserIdSchema,
+    // Optional: without it, Appbase matches the link against the RevenueCat project(s) the app is
+    // connected to, so apps can link before (or without) naming their project.
+    revenuecat_project_id: revenuecatAppUserIdSchema.optional(),
     revenuecat_app_user_id: revenuecatAppUserIdSchema,
     link_source: z.literal('client'),
   })

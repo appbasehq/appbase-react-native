@@ -20,8 +20,12 @@ export interface RevenueCatCustomerInfo {
   readonly requestDate?: string;
 }
 export interface RevenueCatIntegrationOptions {
-  /** RevenueCat project ID (not an SDK key or secret API key), the same project as the webhook. */
-  projectId: string;
+  /**
+   * RevenueCat project ID (not an SDK key or secret API key). Usually omitted: Appbase uses the
+   * RevenueCat project the app is connected to, whenever it is connected. Pass it only when one
+   * app's purchases come from more than one RevenueCat project.
+   */
+  projectId?: string;
   /** Entitlement that unlocks the paywalled offering. Any active entitlement counts when omitted. */
   entitlement?: string;
 }
@@ -88,10 +92,11 @@ export const revenueCatOutcomes: PurchaseOutcomes<unknown> = {
 export function connectRevenueCat(
   analytics: Pick<Analytics, 'linkRevenueCatUser'>,
   purchases: RevenueCatPurchases,
-  options: RevenueCatIntegrationOptions,
+  options: RevenueCatIntegrationOptions = {},
 ): RevenueCatIntegration {
-  const { projectId, entitlement } = options ?? ({} as RevenueCatIntegrationOptions);
-  if (!validProviderId(projectId)) throw new Error('Supply the RevenueCat project ID');
+  const { projectId, entitlement } = options ?? {};
+  if (projectId !== undefined && !validProviderId(projectId))
+    throw new Error('Use the RevenueCat project ID, or omit it');
   if (entitlement !== undefined && !validProviderId(entitlement))
     throw new Error('Use the RevenueCat entitlement identifier, or omit it');
   const tracker = new PurchaseTracker();
@@ -114,7 +119,10 @@ export function connectRevenueCat(
   // The analytics SDK deduplicates identical links, so relinking on every update is cheap.
   const link = () =>
     tracker.background(
-      analytics.linkRevenueCatUser({ projectId, getAppUserId: () => purchases.getAppUserID() }),
+      analytics.linkRevenueCatUser({
+        ...(projectId === undefined ? {} : { projectId }),
+        getAppUserId: () => purchases.getAppUserID(),
+      }),
     );
   const refresh = () => tracker.background(purchases.getCustomerInfo().then(observe));
   const listener = (info: RevenueCatCustomerInfo) => {

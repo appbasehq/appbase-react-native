@@ -431,6 +431,24 @@
       }
     },
     {
+      "id": "revenuecat-client-evidence-without-project",
+      "valid": true,
+      "event": {
+        "schema_version": 1,
+        "event_id": "10000000-0000-4000-8000-000000000001",
+        "installation_id": "10000000-0000-4000-8000-000000000002",
+        "anonymous_id": "10000000-0000-4000-8000-000000000003",
+        "name": "revenuecat_identity_linked",
+        "occurred_at": "2026-09-01T12:00:00.000Z",
+        "platform": "ios",
+        "app_version": "1.0.0",
+        "properties": {
+          "revenuecat_app_user_id": "$RCAnonymousID:test",
+          "link_source": "client"
+        }
+      }
+    },
+    {
       "id": "revenuecat-incorrect-source",
       "valid": false,
       "event": {

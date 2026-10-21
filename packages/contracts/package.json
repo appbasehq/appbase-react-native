@@ -8,6 +8,10 @@
       "types": "./dist/screenshots.d.ts",
       "default": "./dist/screenshots.js"
     },
+    "./plans": {
+      "types": "./dist/plans.d.ts",
+      "default": "./dist/plans.js"
+    },
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"

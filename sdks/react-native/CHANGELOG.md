@@ -4,13 +4,19 @@ Newest first. Each release says what changed and what an upgrade needs. To upgra
 
 1. Install the exact version (`npm install --save-exact @appbasehq/react-native@VERSION`) and commit the lockfile. Pin exact versions; the npm `latest` tag can lag behind the newest release.
 2. Run `pod install` (bare React Native) or rebuild the Expo development and production builds, since the package includes an iOS module.
-3. Launch a development build, confirm events still arrive in App setup, and ship an app update. Installed apps keep their old SDK until then.
+3. Launch a development build, confirm events still arrive (`GET /v1/agent/setup` with setup access, or the dashboard's Development view), and ship an app update. Installed apps keep their old SDK until then.
 
 Wire schema v1, stored identities and queued events carry over between all versions below unless an entry says otherwise. Swift releases are in the [Swift changelog](https://appbase.so/docs/swift-sdk-changelog.md); wire and storage details are in the [compatibility notes](https://appbase.so/docs/sdk-compatibility.md).
 
 ## Unreleased
 
 Nothing yet.
+
+## 0.11.0 (2026-10-21)
+
+**Upgrade:** no code changes. You can remove `projectId` from `connectRevenueCat` and `linkRevenueCatUser`; apps that keep passing it work unchanged.
+
+- `connectRevenueCat(analytics, Purchases, options?)` and `linkRevenueCatUser({ getAppUserId })` no longer need `projectId`: Appbase matches the link to the RevenueCat project the app is connected to, including links sent before it was connected. Pass `projectId` only when one app's purchases come from more than one RevenueCat project; apps that already pass it keep working unchanged.
 
 ## 0.10.0 (2026-10-18)
 

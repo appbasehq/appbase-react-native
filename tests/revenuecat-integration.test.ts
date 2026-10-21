@@ -284,6 +284,19 @@ describe('RevenueCat integration (React Native)', () => {
     await analytics.dispose();
   });
 
+  it('links without a project ID, so the app can connect RevenueCat any time later', async () => {
+    const { analytics, sent } = await sdk();
+    const integration = connectRevenueCat(analytics, revenueCat());
+    await integration.settled();
+    await analytics.flush();
+    const link = sent.find((e) => e.name === 'revenuecat_identity_linked');
+    expect(link?.properties).toEqual({
+      revenuecat_app_user_id: '$RCAnonymousID:first',
+      link_source: 'client',
+    });
+    await analytics.dispose();
+  });
+
   it('rejects invalid options and keeps purchases working after dispose', async () => {
     const { analytics, sent } = await sdk();
     const rc = revenueCat();

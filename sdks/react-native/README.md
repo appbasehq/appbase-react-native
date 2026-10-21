@@ -4,7 +4,7 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.10.0**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.11.0**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
 The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
@@ -12,11 +12,10 @@ Initialization fails without overwriting storage when saved identity/events/work
 
 ## Install
 
-Open **App setup** in your Appbase dashboard and copy **Install SDK (Expo)**.
-Install the public npm package; no repository checkout is needed:
+Usually your coding agent installs it: copy the prompt from **App setup → Connect** in your Appbase dashboard to the agent. To install it yourself, use the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.10.0
+npm install @appbasehq/react-native@0.11.0
 npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
 ```
 
@@ -241,7 +240,6 @@ import Purchases from 'react-native-purchases';
 import { connectRevenueCat } from '@appbasehq/react-native';
 
 const revenueCat = connectRevenueCat(analytics, Purchases, {
-  projectId: 'YOUR_REVENUECAT_PROJECT_ID', // A project ID, not any API key.
   entitlement: 'premium', // Optional; any active entitlement counts when omitted.
 });
 
@@ -257,6 +255,7 @@ const result = await revenueCat.purchase(view, pkg.product.identifier, () =>
 ```
 
 - **Identity:** linked on connect, after every RevenueCat customer update (login, logout, restore, purchase) and before each purchase. After `analytics.identify()` or `reset()` without a RevenueCat change, call `await revenueCat.sync()`.
+- **No project ID needed:** Appbase matches links to the RevenueCat project the app is connected to, whenever it is connected, including links recorded earlier. Pass `projectId` (a project ID, not an API key) only when one app's purchases come from more than one RevenueCat project.
 - **`accessState()`:** `unknown` until RevenueCat reports customer info, then `active` or `inactive`.
 - **`purchase(view, product, call)`:** records the attempt without waiting, so checkout is never delayed, and returns RevenueCat's result or rethrows its error unchanged. The outcome is succeeded with the store transaction ID, cancelled (`userCancelled`, code `1`), pending (Ask to Buy, code `20`) or failed with RevenueCat's error code. `view` may be a view, a promise of one, or `null` (the purchase still runs and nothing is recorded). Any RevenueCat purchase call works: `purchasePackage`, `purchaseStoreProduct`, `purchaseSubscriptionOption`.
 - Keep calling `view.productSelected()` and `view.dismissed()` yourself; a restore is not a purchase attempt.
@@ -271,7 +270,7 @@ The app owns its RevenueCat installation and authentication. Our SDK has no Reve
 ```ts
 const syncRevenueCatIdentity = () =>
   analytics.linkRevenueCatUser({
-    projectId: 'YOUR_REVENUECAT_PROJECT_ID', // A project ID, not any API key.
+    // projectId is optional: only when one app's purchases come from several RevenueCat projects.
     getAppUserId: () => Purchases.getAppUserID(),
   });
 await syncRevenueCatIdentity();
@@ -285,7 +284,7 @@ Returns the durable event ID, or null when disabled, stale, invalid, full, looku
 
 Do not substitute our anonymous UUID for RevenueCat's App User ID, automatically merge restored users, or change the app's RevenueCat authentication policy to use this helper. RevenueCat has its own anonymous/alias behavior. See [RevenueCat identity documentation](https://www.revenuecat.com/docs/customers/identifying-customers).
 
-The resulting `revenuecat_identity_linked` event has `revenuecat_project_id`, `revenuecat_app_user_id`, and `link_source: client`. It is client evidence, not authentication or entitlement verification. Owner receipt inspection matches these observations to provider-reported IDs/aliases within the mapped app/environment/project. Conflicting subjects remain unresolved; it never merges accounts or turns a successful callback into revenue.
+The resulting `revenuecat_identity_linked` event has `revenuecat_app_user_id`, `link_source: client` and, when given, `revenuecat_project_id`. It is client evidence, not authentication or entitlement verification. Owner receipt inspection matches these observations to provider-reported IDs/aliases within the mapped app/environment/project. Conflicting subjects remain unresolved; it never merges accounts or turns a successful callback into revenue.
 
 ## Identity and collection controls
 
@@ -313,7 +312,7 @@ Explicit contact works while tracking is disabled; in that case analytics identi
 
 ## Configure new users
 
-**Required for SDK acquisition and retention:** in App setup, choose one new-user event and optional exact property filters for the app. Agents can read, preview and save it using app-scoped setup access. Use the [definition guide](https://appbase.so/docs/first-use.md) for the API, selection examples and acceptance checklist.
+**Required for SDK acquisition and retention:** your coding agent chooses one new-user event and optional exact property filters for the app, then previews and saves it with app-scoped setup access. App setup shows the saved event. Use the [definition guide](https://appbase.so/docs/first-use.md) for the API, selection examples and acceptance checklist.
 
 No dedicated SDK marker call is needed. Reuse an existing event such as `onboarding_started` with `flow_id`, or track an ordinary entry event. The server counts each resolved identity once, at its earliest matching occurrence across recorded history. A brand-new app can explicitly select automatic `app_first_open`; existing apps must audit returning-user and upgrade paths before choosing it. Completion/purchase events exclude people who dropped out earlier.
 

@@ -6,7 +6,7 @@ This is a generated, independently buildable source mirror for `@appbasehq/react
 
 ## Install in an application
 
-`npm install @appbasehq/react-native@0.10.0`
+`npm install @appbasehq/react-native@0.11.0`
 
 Pin the exact version: the npm `latest` tag can lag behind the newest release. See [the changelog](sdks/react-native/CHANGELOG.md) for what each version changed and what an upgrade needs, and [the SDK guide](sdks/react-native/README.md) for storage, lifecycle, identity, onboarding, paywalls and explicit feedback. A source version or repository tag is not evidence that the same version has been published to npm.
 
@@ -20,7 +20,7 @@ pnpm check
 pnpm pack:sdk
 ```
 
-The check runs generated-schema drift validation, the SDK build, workspace typechecks and eight portable test files, including all 27 shared behavior scenarios. `pnpm sdk:conformance` runs only shared scenarios and canonical contract vectors. `pnpm pack:sdk` (also aliased as `pnpm sdk:release` for the SDK guide) creates a local candidate under ignored `artifacts/`; neither command publishes or changes customer installation metadata.
+The check runs generated-schema drift validation, the SDK build, workspace typechecks and eight portable test files, including all 28 shared behavior scenarios. `pnpm sdk:conformance` runs only shared scenarios and canonical contract vectors. `pnpm pack:sdk` (also aliased as `pnpm sdk:release` for the SDK guide) creates a local candidate under ignored `artifacts/`; neither command publishes or changes customer installation metadata.
 
 The portable suite uses controlled storage/network adapters. It does not prove real PostgreSQL acceptance, a React Native device runtime, lifecycle crash recovery, store purchases, Swift parity or deployment. Those release gates run in the canonical product repository. Shared contract documents discuss those broader upstream gates; only commands listed in this mirror's package.json are available here. The automatic source-check workflow checks Node 22 and 24 and never publishes. Workflow presence alone is not evidence of a completed hosted run.
 

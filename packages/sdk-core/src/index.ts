@@ -53,8 +53,12 @@ export type {
 } from '@mobile-analytics/contracts/types';
 
 export interface RevenueCatIdentityOptions {
-  /** RevenueCat project ID, not its public SDK key or secret API key. */
-  projectId: string;
+  /**
+   * RevenueCat project ID, not its public SDK key or secret API key. Usually omitted: Appbase uses
+   * the RevenueCat project the app is connected to. Pass it only when one app's purchases come from
+   * more than one RevenueCat project.
+   */
+  projectId?: string;
   /** Called after capturing analytics identity. Pass () => Purchases.getAppUserID(). */
   getAppUserId: () => Promise<string>;
 }
@@ -212,7 +216,7 @@ interface State {
     }
   >;
   paywalls?: PaywallStore;
-  revenuecatIdentity?: { projectId: string; appUserId: string; eventId: string };
+  revenuecatIdentity?: { projectId?: string; appUserId: string; eventId: string };
 }
 
 export class Analytics {
@@ -556,10 +560,10 @@ export class Analytics {
   async linkRevenueCatUser(options: RevenueCatIdentityOptions): Promise<string | null> {
     const projectId = options?.projectId;
     const lookup = options?.getAppUserId;
-    if (!validProviderId(projectId) || typeof lookup !== 'function') {
+    if ((projectId !== undefined && !validProviderId(projectId)) || typeof lookup !== 'function') {
       this.diagnose({
         code: 'invalid_event',
-        message: 'Supply a RevenueCat project ID and an ID lookup callback',
+        message: 'Supply an ID lookup callback, and a valid RevenueCat project ID or none',
       });
       return null;
     }
@@ -595,15 +599,19 @@ export class Analytics {
           return null;
         }
         const previous = this.state.revenuecatIdentity;
-        if (previous?.projectId === projectId && previous.appUserId === appUserId)
+        if (previous && previous.projectId === projectId && previous.appUserId === appUserId)
           return previous.eventId;
         const event = this.event('revenuecat_identity_linked', {
-          revenuecat_project_id: projectId,
+          ...(projectId === undefined ? {} : { revenuecat_project_id: projectId }),
           revenuecat_app_user_id: appUserId,
           link_source: 'client',
         });
         if (!this.enqueue(event)) return null;
-        this.state.revenuecatIdentity = { projectId, appUserId, eventId: event.event_id };
+        this.state.revenuecatIdentity = {
+          ...(projectId === undefined ? {} : { projectId }),
+          appUserId,
+          eventId: event.event_id,
+        };
         return event.event_id;
       }, true);
       if (this.state.events.length >= this.batchSize) void this.flush();

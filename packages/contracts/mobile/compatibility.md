@@ -32,6 +32,8 @@ Never weaken validation to make a failing scenario pass without reviewing its in
 
 Wire, storage and identity effects of each SDK release. What changed for app developers, and what an upgrade needs, is in the changelogs ([React Native](https://appbase.so/docs/sdk-changelog.md), [Swift](https://appbase.so/docs/swift-sdk-changelog.md)).
 
+React Native 0.11.0 and Swift 0.10.0 keep wire schema v1, storage and identities. `revenuecat_identity_linked` may now omit `revenuecat_project_id`, and stored link state may omit its project; the API (migration 053) matches such a link against every RevenueCat project its app is connected to. An API without migration 053 rejects those links, so it must be live before these SDKs are used (it is since 21 October 2026). Links that name a project behave as before.
+
 React Native 0.10.0 and Swift 0.9.0 keep wire schema v1, storage and identities. A changed onboarding definition under an existing version no longer throws; saved attempts are kept or restarted by the [onboarding rules](https://github.com/appbasehq/appbase-react-native/blob/main/packages/contracts/mobile/behavior.md#onboarding), and an optional `warnings` list in batch responses becomes `configuration` diagnostics. Older servers omit `warnings`; the hosted API (migration 046) keeps changed definitions instead of rejecting their events, for every SDK version.
 
 React Native 0.9.0 and Swift 0.8.0 add `setProfile` (an identified account's email and name for the dashboard) as the `profile_updated` event in wire schema v1, and retry an Unknown build detection in the background. An API without migration 036 would store a profile as an ordinary event, email included; the hosted API has it. Storage and identities are unchanged, and upgrading needs no code change.

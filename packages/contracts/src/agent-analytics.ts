@@ -61,7 +61,10 @@ export const agentReportQuerySchema = z
   });
 export interface AnalyticsMetric {
   value: number | null;
-  unit: 'count' | 'usd_cents' | 'ratio';
+  /** `currency` amounts are major units of `currency` (an ad account's own currency, never USD
+   * converted). */
+  unit: 'count' | 'usd_cents' | 'ratio' | 'currency';
+  currency?: string;
   basis: 'period' | 'snapshot' | 'cohort';
   definition: string;
   as_of?: string | null;

@@ -10,7 +10,9 @@ export * from './revenuecat.js';
 export * from './reporting.js';
 export * from './agent-analytics.js';
 export * from './acquisition.js';
+export * from './ad-return.js';
 export * from './period-overview.js';
+export * from './plans.js';
 /** PostgreSQL text/jsonb cannot store NUL or unpaired UTF-16 surrogates; reject them per event. */
 export const storableText = (value: string) => !/[\u0000\uD800-\uDFFF]/u.test(value);
 const unstorable = 'Text contains a NUL or unpaired surrogate character';
@@ -33,6 +35,40 @@ export const createAppSchema = z
   })
   .strict();
 export type CreateAppInput = z.infer<typeof createAppSchema>;
+/** The owner's setup flow also records the App Store listing, or that the app is not released. */
+export const ownerCreateAppSchema = createAppSchema
+  .extend({
+    release_status: z.enum(['live', 'unreleased']).optional(),
+    app_store_id: z
+      .string()
+      .regex(/^[0-9]{1,20}$/)
+      .optional(),
+    bundle_id: z
+      .string()
+      .regex(/^[A-Za-z0-9.-]{1,155}$/)
+      .optional(),
+  })
+  .strict()
+  .refine(
+    (app) =>
+      app.release_status === 'live'
+        ? Boolean(app.app_store_id && app.bundle_id)
+        : !app.app_store_id && !app.bundle_id,
+    'A live app needs its App Store ID and bundle ID; other apps have neither',
+  );
+export type OwnerCreateAppInput = z.infer<typeof ownerCreateAppSchema>;
+/** App icons are stored small: a square PNG, JPEG or WebP of at most 256 KiB. */
+export const appIconTypes = ['image/png', 'image/jpeg', 'image/webp'] as const;
+export const appIconMaxBytes = 262144;
+export const appIconUploadSchema = z
+  .object({
+    content_type: z.enum(appIconTypes),
+    data: z
+      .string()
+      .max(Math.ceil(appIconMaxBytes / 3) * 4)
+      .regex(/^[A-Za-z0-9+/]+={0,2}$/),
+  })
+  .strict();
 export const onboardingQuestionSchema = z
   .object({
     id: trackingLabel,
