@@ -1,14 +1,23 @@
 import { MOBILE_LIMITS } from '@mobile-analytics/contracts/mobile-constants';
 import { jsonBytes, snapshotProperties, storableText, validProperties } from './properties.js';
-import { acknowledgedIds, retryDelay } from './delivery.js';
+import {
+  acknowledgedIds,
+  backoffDelay,
+  keyFingerprint,
+  responseKind,
+  retryDelay,
+} from './delivery.js';
 import {
   validEventName,
   validLabel,
-  validStoredState,
+  validStoredEvent,
+  validStoredRoot,
+  validStoredWorkflows,
   validUuid,
   validProviderId,
 } from './validation.js';
 import { FeedbackError, submitFeedback, type FeedbackInput } from './feedback.js';
+import { uuidv7 } from './uuid.js';
 export { FeedbackError, type FeedbackInput } from './feedback.js';
 export type { FeedbackReceipt } from '@mobile-analytics/contracts/types';
 import { questions as defineQuestions, type QuestionInput } from './questions.js';
@@ -172,11 +181,12 @@ export interface Diagnostic {
   message: string;
   eventId?: string;
 }
+/** Appbase's collection host, where SDKs send events and feedback unless `apiUrl` overrides it. */
+export const DEFAULT_COLLECTION_URL = 'https://in.appbase.so';
 export interface AnalyticsOptions {
-  /** Needed only for legacy collection keys. New keys contain their storage namespace. */
-  appId?: string;
-  environment?: 'development' | 'production';
-  apiUrl: string;
+  /** Defaults to https://in.appbase.so; set it only for a local or self-run server. */
+  apiUrl?: string;
+  /** The app's one collection key (`ma_prod_…`), the same in every build. */
   collectionKey: string;
   platform: 'ios' | 'android' | 'test';
   appVersion: string;
@@ -188,17 +198,28 @@ export interface AnalyticsOptions {
    */
   detectRuntimeEnvironment?: () => Promise<RuntimeEnvironment>;
   storage: StorageAdapter;
-  generateId: () => string;
+  /** Defaults to time-ordered UUIDv7 IDs; inject only for deterministic tests. */
+  generateId?: () => string;
   /** Pass React Native's AppState for automatic app-open tracking. Missing on iOS/Android emits a configuration warning. */
   appState?: AppStateAdapter;
   networkInfo?: NetworkAdapter;
   onDiagnostic?: (diagnostic: Diagnostic) => void;
   flushIntervalMs?: number;
   maxQueueSize?: number;
+  /** Serialized bytes of queued events (default 1.5 MiB, at most 5 MiB); the newest is dropped beyond it. */
+  maxQueueBytes?: number;
   batchSize?: number;
   requestTimeoutMs?: number;
   fetch?: typeof fetch;
   now?: () => Date;
+  /**
+   * `false` waits for consent on a new installation: nothing is stored or sent, not even an
+   * identifier, until `setEnabled(true)`, which records `app_first_open`. Ignored once the
+   * installation has stored state (its saved choice wins).
+   */
+  initiallyEnabled?: boolean;
+  /** Sender sent as X-Appbase-SDK (`react-native/0.12.0`); the public facade sets it. */
+  sdk?: string;
 }
 interface State {
   version: 1;
@@ -217,40 +238,81 @@ interface State {
   >;
   paywalls?: PaywallStore;
   revenuecatIdentity?: { projectId?: string; appUserId: string; eventId: string };
+  /** Server answers that must survive a restart; see the status table in behavior.md. */
+  delivery?: DeliveryState;
 }
+/** Kept for one collection key (by fingerprint): another key starts clean. */
+interface DeliveryState {
+  key: string;
+  /** Earliest send the server asked for (Retry-After); neither resume() nor reconnection bypasses it. */
+  retryAt?: string;
+  /** A configuration rejection (redirect, 401, 403, 404, other 4xx) and its cool-down; resume() lifts it. */
+  blocked?: { status: number; until: string };
+  /** 410 Gone: this key can never collect again; nothing is captured or sent with it. */
+  gone?: true;
+  /** The last server `control` steering (already clamped); a later acknowledgement without one clears it. */
+  control?: { minRetryMs?: number; flushIntervalMs?: number; maxBatch?: number };
+}
+const validTime = (value: unknown) =>
+  typeof value === 'string' && Number.isFinite(Date.parse(value));
+const validDelivery = (value: unknown): value is DeliveryState => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const d = value as Record<string, unknown>;
+  const blocked = d.blocked as Record<string, unknown> | undefined;
+  return (
+    typeof d.key === 'string' &&
+    (d.retryAt === undefined || validTime(d.retryAt)) &&
+    (d.gone === undefined || d.gone === true) &&
+    (d.control === undefined || (!!d.control && typeof d.control === 'object')) &&
+    (blocked === undefined ||
+      (!!blocked &&
+        typeof blocked === 'object' &&
+        Number.isSafeInteger(blocked.status) &&
+        validTime(blocked.until)))
+  );
+};
 
 export class Analytics {
   private state!: State;
   private serial: Promise<unknown> = Promise.resolve();
   private inFlight: Promise<void> | null = null;
-  private timer: ReturnType<typeof setInterval> | undefined;
+  private timer: ReturnType<typeof setTimeout> | undefined;
   private runtimeRetry: ReturnType<typeof setTimeout> | undefined;
   /** Build at capture: explicit, detected, or a later retry's answer after Unknown. */
   private runtime: RuntimeEnvironment | undefined;
   private cleanup: (() => void)[] = [];
   private disposed = false;
-  private blocked = false;
+  /** A new installation waiting for consent (initiallyEnabled: false): state lives only in memory. */
+  private pending = false;
+  /** Local backoff after network failures; not persisted, so a restart tries once. */
   private failures = 0;
   private retryAt = 0;
-  private serverRetryAt = 0;
+  private readonly keyPrint: string;
   private activeController: AbortController | undefined;
   private readonly key: string;
   private readonly clock: () => Date;
   private readonly transport: typeof fetch;
   private readonly batchSize: number;
   private readonly capacity: number;
+  private readonly byteCapacity: number;
+  /** Serialized size of each queued event object, measured once. */
+  private sizes = new WeakMap<object, number>();
   private identityRevision = 0;
   private definitions = new Map<string, OnboardingDefinition>();
   private onboardingHandles = new WeakSet<object>();
   private warned = new Set<string>();
 
+  /** The collection origin, explicit or the default host, without a trailing slash. */
+  private readonly endpoint: string;
   private constructor(private readonly options: AnalyticsOptions) {
     // Callers may reuse or mutate their configuration object after initialization.
-    this.options = Object.freeze({ ...options });
+    this.options = Object.freeze({ ...options, apiUrl: options.apiUrl ?? DEFAULT_COLLECTION_URL });
+    options = this.options;
+    this.endpoint = String(options.apiUrl ?? DEFAULT_COLLECTION_URL).replace(/\/$/, '');
     this.runtime = options.runtimeEnvironment;
     let endpoint: URL;
     try {
-      endpoint = new URL(options.apiUrl);
+      endpoint = new URL(this.endpoint);
     } catch {
       throw new Error('Analytics requires an absolute HTTP(S) API URL');
     }
@@ -276,11 +338,12 @@ export class Analytics {
         )) ||
       typeof options.storage?.getItem !== 'function' ||
       typeof options.storage?.setItem !== 'function' ||
-      typeof options.generateId !== 'function'
+      (options.generateId !== undefined && typeof options.generateId !== 'function')
     )
       throw new Error('Invalid analytics configuration');
     for (const [name, value] of Object.entries({
       maxQueueSize: options.maxQueueSize,
+      maxQueueBytes: options.maxQueueBytes,
       batchSize: options.batchSize,
       requestTimeoutMs: options.requestTimeoutMs,
     }))
@@ -288,6 +351,7 @@ export class Analytics {
         throw new Error(`${name} must be a positive safe integer`);
     if (
       (options.maxQueueSize ?? 0) > MOBILE_LIMITS.maxQueueSize ||
+      (options.maxQueueBytes ?? 0) > MOBILE_LIMITS.maxQueueBytes ||
       (options.requestTimeoutMs ?? 0) > MOBILE_LIMITS.maxRequestTimeoutMs
     )
       throw new Error('Queue size or request timeout exceeds the supported maximum');
@@ -298,27 +362,18 @@ export class Analytics {
         options.flushIntervalMs > MOBILE_LIMITS.maxFlushIntervalMs)
     )
       throw new Error('flushIntervalMs must be a nonnegative safe integer');
-    const parts =
-      /^ma_(dev|prod)_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_[0-9a-f]{48}$/.exec(
+    // The key names its app, which scopes durable state. Development keys and keys without an
+    // app ID were retired before 0.12.0; the server no longer accepts them.
+    const appId =
+      /^ma_prod_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_[0-9a-f]{48}$/.exec(
         options.collectionKey,
-      );
-    const appId = parts?.[2] ?? options.appId;
-    const environment = parts
-      ? parts[1] === 'prod'
-        ? 'production'
-        : 'development'
-      : options.environment;
-    if (!appId || !['development', 'production'].includes(environment ?? ''))
+      )?.[1];
+    if (!appId)
       throw new Error(
-        'Legacy keys require appId and environment; copy the full saved configuration',
+        "Use the app's collection key from Appbase (ma_prod_…), the same key in every build",
       );
-    if (
-      parts &&
-      ((options.appId && options.appId !== appId) ||
-        (options.environment && options.environment !== environment))
-    )
-      throw new Error('Collection key does not match the configured app/environment');
-    this.key = `mobile-analytics:v1:${appId}:${environment}`;
+    this.key = `mobile-analytics:v1:${appId}:production`;
+    this.keyPrint = keyFingerprint(options.collectionKey);
     this.clock = options.now ?? (() => new Date());
     this.transport = options.fetch ?? globalThis.fetch;
     this.batchSize = Math.max(
@@ -326,7 +381,8 @@ export class Analytics {
       Math.min(options.batchSize ?? MOBILE_LIMITS.defaultBatchSize, MOBILE_LIMITS.batchEvents),
     );
     this.capacity = Math.max(1, options.maxQueueSize ?? MOBILE_LIMITS.defaultQueueSize);
-    if (endpoint.protocol !== 'https:' && environment === 'production' && !localHost(endpoint))
+    this.byteCapacity = options.maxQueueBytes ?? MOBILE_LIMITS.defaultQueueBytes;
+    if (endpoint.protocol !== 'https:' && !localHost(endpoint))
       throw new Error('Production analytics requires HTTPS outside local development hosts');
   }
 
@@ -338,30 +394,43 @@ export class Analytics {
     options = client.options;
     const stored = await client.options.storage.getItem(client.key);
     if (stored) {
-      const parsed = JSON.parse(stored) as State;
-      if (!validStoredState(parsed))
+      const parsed: unknown = JSON.parse(stored);
+      if (!validStoredRoot(parsed))
         throw new Error('Unsupported analytics storage; do not overwrite without a migration');
-      client.state = parsed;
+      client.state = parsed as unknown as State;
+      if (client.recover())
+        // Saved once so the drop is not counted again; on failure it is retried with the next save.
+        await options.storage.setItem(client.key, JSON.stringify(client.state)).catch(() => {
+          client.diagnose({
+            code: 'storage',
+            message: 'Could not save the cleaned analytics state',
+          });
+        });
+      // Delivery state of a replaced key, or unreadable, does not apply to this key.
+      if (
+        parsed.delivery !== undefined &&
+        (!validDelivery(parsed.delivery) || parsed.delivery.key !== client.keyPrint)
+      )
+        delete client.state.delivery;
     } else {
+      client.pending = options.initiallyEnabled === false;
       client.state = {
         version: 1,
         installationId: client.nextId(),
         anonymousId: client.nextId(),
-        enabled: true,
+        enabled: !client.pending,
         events: [],
         dropped: 0,
       };
       if (client.state.installationId.toLowerCase() === client.state.anonymousId.toLowerCase())
         throw new Error('generateId must return distinct identity UUIDs');
-      client.state.events.push(client.event('app_first_open', {}));
-      await options.storage.setItem(client.key, JSON.stringify(client.state));
+      if (!client.pending) {
+        client.state.events.push(client.event('app_first_open', {}));
+        await options.storage.setItem(client.key, JSON.stringify(client.state));
+      }
     }
     if (detect && client.runtime === 'unknown') client.retryRuntime(detect);
-    const interval = options.flushIntervalMs ?? MOBILE_LIMITS.defaultFlushIntervalMs;
-    if (interval > 0)
-      client.timer = setInterval(() => {
-        void client.flush();
-      }, interval);
+    client.schedule();
     if (options.appState) {
       // An open is a return from the background (or a launch). iOS `inactive` interruptions such
       // as Control Center, system alerts, Face ID or the purchase sheet are not new opens.
@@ -398,6 +467,7 @@ export class Analytics {
       client.cleanup.push(
         options.networkInfo.addEventListener((state) => {
           if (state.isConnected) {
+            // Reconnection lifts local backoff only, never a server-stated wait or block.
             client.retryAt = 0;
             void client.flush();
           }
@@ -436,7 +506,9 @@ export class Analytics {
       const before = persist ? JSON.stringify(this.state) : '';
       try {
         const result = await operation();
-        if (persist) await this.options.storage.setItem(this.key, JSON.stringify(this.state));
+        // Before consent nothing reaches storage; consent saves this state for the first time.
+        if (persist && !this.pending)
+          await this.options.storage.setItem(this.key, JSON.stringify(this.state));
         return result;
       } catch (error) {
         if (persist) this.state = JSON.parse(before) as State;
@@ -481,8 +553,12 @@ export class Analytics {
     // Never keep a Node host alive for a background retry.
     (this.runtimeRetry as { unref?: () => void }).unref?.();
   }
+  /** An unchecked new UUID: injected, or UUIDv7 from the SDK clock. */
+  private newId(): string {
+    return this.options.generateId ? this.options.generateId() : uuidv7(this.clock().getTime());
+  }
   private nextId(): string {
-    const id = this.options.generateId();
+    const id = this.newId();
     if (
       !validUuid(id) ||
       this.state?.events.some((event) => event.event_id.toLowerCase() === id.toLowerCase())
@@ -490,8 +566,52 @@ export class Analytics {
       throw new Error('generateId must return a fresh UUID');
     return id;
   }
+  /**
+   * Unreadable stored events (and over-limit or duplicate ones) are dropped and counted, and an
+   * unreadable workflow section is cleared, instead of failing every launch. Returns whether
+   * anything changed, so the cleaned state is saved once.
+   */
+  private recover() {
+    const state = this.state as unknown as Record<string, unknown> & State;
+    const seen = new Set<string>();
+    const events = (state.events as unknown[]).filter((event) => {
+      if (!validStoredEvent(event, state.installationId) || seen.size >= MOBILE_LIMITS.maxQueueSize)
+        return false;
+      const id = (event as AnalyticsEvent).event_id.toLowerCase();
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    }) as AnalyticsEvent[];
+    const dropped = state.events.length - events.length;
+    const cleared = (['onboarding', 'paywalls', 'revenuecatIdentity'] as const).filter(
+      (section) => !validStoredWorkflows[section](state[section]),
+    );
+    if (!dropped && !cleared.length) return false;
+    state.events = events;
+    state.dropped += dropped;
+    for (const section of cleared) delete state[section];
+    this.diagnose({
+      code: 'storage',
+      message: `Unreadable saved analytics state was discarded (${dropped} events${
+        cleared.length ? `, ${cleared.join(', ')}` : ''
+      })`,
+    });
+    return true;
+  }
+  private queueBytes() {
+    let total = 0;
+    for (const event of this.state.events) {
+      let size = this.sizes.get(event);
+      if (size === undefined) this.sizes.set(event, (size = jsonBytes(event)));
+      total += size;
+    }
+    return total;
+  }
   private enqueue(event: AnalyticsEvent) {
-    if (this.state.events.length >= this.capacity) {
+    // A retired key records nothing, like disabled analytics; a new key starts clean.
+    if (this.delivery()?.gone) return false;
+    const size = jsonBytes(event);
+    if (this.state.events.length >= this.capacity || this.queueBytes() + size > this.byteCapacity) {
       this.state.dropped++;
       this.diagnose({
         code: 'queue_full',
@@ -500,6 +620,7 @@ export class Analytics {
       });
       return false;
     }
+    this.sizes.set(event, size);
     this.state.events.push(event);
     return true;
   }
@@ -548,13 +669,24 @@ export class Analytics {
         ...identity,
       },
       {
-        generateId: this.options.generateId,
+        generateId: () => this.newId(),
         fetch: this.transport,
-        apiUrl: this.options.apiUrl,
-        collectionKey: this.options.collectionKey,
+        apiUrl: this.endpoint,
+        headers: this.headers(),
         timeout: this.options.requestTimeoutMs ?? MOBILE_LIMITS.defaultRequestTimeoutMs,
       },
     );
+  }
+  /** Every request names its key and sender; the server keeps the SDK and dropped count per install. */
+  private headers(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      'X-API-Key': this.options.collectionKey,
+      ...(this.options.sdk ? { 'X-Appbase-SDK': this.options.sdk } : {}),
+      'X-Appbase-Dropped': String(this.state.dropped),
+      // Device clock at send time; the server corrects event times from a wrong clock.
+      'X-Appbase-Sent-At': this.clock().toISOString(),
+    };
   }
   /** Durable client identity evidence; never grants access or verifies a purchase. */
   async linkRevenueCatUser(options: RevenueCatIdentityOptions): Promise<string | null> {
@@ -650,7 +782,7 @@ export class Analytics {
       }
     };
     return createPaywall(options, {
-      generateId: this.options.generateId,
+      generateId: () => this.newId(),
       perform,
       ownsOnboarding: (handle) => this.onboardingHandles.has(handle),
     });
@@ -990,6 +1122,24 @@ export class Analytics {
       return;
     }
     if (!enabled) this.activeController?.abort();
+    // Declining before the first consent stores nothing, so the next launch asks again.
+    if (this.pending && !enabled) return;
+    if (this.pending) {
+      const pending = this.state;
+      try {
+        await this.update(() => {
+          this.pending = false;
+          this.state.enabled = true;
+          // The installation is first observed now, with consent.
+          this.state.events.unshift(this.event('app_first_open', {}));
+        }, true);
+      } catch {
+        this.pending = true;
+        this.state = pending;
+        this.diagnose({ code: 'storage', message: 'Could not persist analytics consent' });
+      }
+      return;
+    }
     await this.update(() => {
       if (this.state.enabled !== enabled) this.identityRevision++;
       this.state.enabled = enabled;
@@ -1009,24 +1159,31 @@ export class Analytics {
     }));
   }
   async getStatus() {
-    return this.update(() => ({
-      queued: this.state.events.length,
-      dropped: this.state.dropped,
-      enabled: this.state.enabled,
-      blocked: this.blocked,
-      retryAt: Math.max(this.retryAt, this.serverRetryAt),
-    }));
+    return this.update(() => {
+      const d = this.delivery();
+      return {
+        queued: this.state.events.length,
+        dropped: this.state.dropped,
+        enabled: this.state.enabled,
+        blocked: Boolean(d?.blocked || d?.gone),
+        retryAt: Math.max(
+          this.retryAt,
+          d?.retryAt ? Date.parse(d.retryAt) : 0,
+          d?.blocked ? Date.parse(d.blocked.until) : 0,
+        ),
+      };
+    });
   }
-  /** Retry after correcting credentials/configuration. Does not modify queued events. */
-  resume() {
-    this.blocked = false;
+  /** Retry after correcting credentials/configuration. Lifts a block and local backoff, never a
+   * server-stated Retry-After or a retired (410) key. Does not modify queued events. */
+  async resume() {
     this.retryAt = 0;
+    if (this.delivery()?.blocked) await this.saveDelivery((d) => delete d.blocked);
     return this.flush();
   }
   flush(): Promise<void> {
     if (this.inFlight) return this.inFlight;
-    if (this.disposed || this.blocked || Date.now() < Math.max(this.retryAt, this.serverRetryAt))
-      return Promise.resolve();
+    if (this.disposed || !this.sendable()) return Promise.resolve();
     this.inFlight = this.deliver()
       .catch(() => {
         this.diagnose({
@@ -1039,13 +1196,74 @@ export class Analytics {
       });
     return this.inFlight;
   }
+  /** Periodic flush; the server can lengthen (never shorten or enable) the app's interval. */
+  private schedule() {
+    const configured = this.options.flushIntervalMs ?? MOBILE_LIMITS.defaultFlushIntervalMs;
+    if (configured <= 0 || this.disposed) return;
+    const steered = this.delivery()?.control?.flushIntervalMs ?? 0;
+    this.timer = setTimeout(
+      () => {
+        void this.flush().finally(() => this.schedule());
+      },
+      Math.max(configured, steered),
+    );
+  }
+  /** Clamp untrusted steering to the contract's bounds; unknown or invalid fields are ignored. */
+  private steering(raw: unknown, now: number) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
+    const c = raw as Record<string, unknown>;
+    const whole = (value: unknown, min: number, max: number) =>
+      typeof value === 'number' && Number.isFinite(value)
+        ? Math.min(max, Math.max(min, Math.floor(value)))
+        : undefined;
+    const until = typeof c.disabled_until === 'string' ? Date.parse(c.disabled_until) : NaN;
+    return {
+      control: Object.fromEntries(
+        Object.entries({
+          minRetryMs: whole(c.min_retry_ms, 0, MOBILE_LIMITS.controlMaxRetryMs),
+          flushIntervalMs: whole(c.flush_interval_ms, 0, MOBILE_LIMITS.maxFlushIntervalMs),
+          maxBatch: whole(c.max_batch, 1, MOBILE_LIMITS.batchEvents),
+        }).filter(([, value]) => value !== undefined),
+      ) as NonNullable<DeliveryState['control']>,
+      disabledUntil: Number.isFinite(until)
+        ? Math.min(until, now + MOBILE_LIMITS.controlMaxDisableMs)
+        : undefined,
+      purge: c.purge === true,
+    };
+  }
+  /** This key's stored delivery state; another key's never applies. */
+  private delivery(): DeliveryState | undefined {
+    return this.state.delivery?.key === this.keyPrint ? this.state.delivery : undefined;
+  }
+  /** Persist a delivery change; when storage fails it still applies for this session. */
+  private async saveDelivery(change: (d: DeliveryState) => void) {
+    const apply = () => {
+      if (this.state.delivery?.key !== this.keyPrint) this.state.delivery = { key: this.keyPrint };
+      change(this.state.delivery);
+    };
+    try {
+      await this.update(apply, true);
+    } catch {
+      apply();
+      this.diagnose({ code: 'storage', message: 'Could not persist the server delivery answer' });
+    }
+  }
+  private sendable() {
+    const d = this.delivery(),
+      now = this.clock().getTime();
+    if (d?.gone || (d?.blocked && now < Date.parse(d.blocked.until))) return false;
+    if (d?.retryAt && now < Date.parse(d.retryAt)) return false;
+    return now >= this.retryAt;
+  }
   private async deliver() {
+    // Halved after 400/413 to isolate an oversized or unreadable event, for the rest of this flush.
+    let limit = Math.min(this.batchSize, this.delivery()?.control?.maxBatch ?? Infinity);
     for (let batchNumber = 0; batchNumber < MOBILE_LIMITS.maxBatchesPerFlush; batchNumber++) {
       const batch = await this.update(() => {
         if (!this.state.enabled) return [];
         const batch: AnalyticsEvent[] = [];
         let bytes = 14; // JSON envelope plus separators; stay below the API's 1 MiB limit.
-        for (const event of this.state.events.slice(0, this.batchSize)) {
+        for (const event of this.state.events.slice(0, limit)) {
           const size = jsonBytes(event) + 1;
           if (batch.length && bytes + size > MOBILE_LIMITS.clientBatchBytes) break;
           batch.push(event);
@@ -1061,49 +1279,101 @@ export class Analytics {
         this.options.requestTimeoutMs ?? MOBILE_LIMITS.defaultRequestTimeoutMs,
       );
       try {
-        const response = await this.transport(
-          `${this.options.apiUrl.replace(/\/$/, '')}/v1/events/batch`,
-          {
-            method: 'POST',
-            redirect: 'error',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-API-Key': this.options.collectionKey,
-              // Device clock at send time; the server corrects event times from a wrong clock.
-              'X-Appbase-Sent-At': this.clock().toISOString(),
-            },
-            body: JSON.stringify({ events: batch }),
-            signal: controller.signal,
-          },
-        );
-        if (response.status === 429 || response.status >= 500) {
-          const delay = retryDelay(response.headers.get('retry-after'), Date.now());
-          if (response.status === 429) {
-            this.serverRetryAt = Date.now() + delay;
+        const response = await this.transport(`${this.endpoint}/v1/events/batch`, {
+          method: 'POST',
+          // Never follow: a redirect answers as a response (or an opaque one in browsers).
+          redirect: 'manual',
+          headers: this.headers(),
+          body: JSON.stringify({ events: batch }),
+          signal: controller.signal,
+        });
+        const status = response.status;
+        const kind = responseKind(status, response.type === 'opaqueredirect');
+        const now = this.clock().getTime();
+        if (kind !== 'ack') {
+          const wait = retryDelay(response.headers.get('retry-after'), now);
+          if (wait > 0)
+            await this.saveDelivery((d) => (d.retryAt = new Date(now + wait).toISOString()));
+        }
+        if (kind === 'retry') {
+          if (status === 429)
             this.diagnose({
               code: 'network',
               message:
                 'HTTP 429: ingestion limit reached; queued events will retry after the limit resets',
             });
-          }
-          this.backoff(delay);
+          this.backoff();
           return;
         }
-        if (!response.ok) {
-          this.blocked = true;
+        if (kind === 'blocked') {
+          const until = new Date(now + MOBILE_LIMITS.blockedRetryMs).toISOString();
+          await this.saveDelivery((d) => (d.blocked = { status, until }));
           this.diagnose({
             code: 'blocked',
-            message: `Collection rejected with HTTP ${response.status}; fix configuration then resume`,
+            message: `Collection rejected with HTTP ${status}; fix configuration then resume (retried hourly)`,
           });
           return;
+        }
+        if (kind === 'gone') {
+          await this.update(() => {
+            this.state.dropped += this.state.events.length;
+            this.state.events = [];
+          }, true).catch(() => undefined);
+          await this.saveDelivery((d) => {
+            d.gone = true;
+            delete d.blocked;
+          });
+          this.diagnose({
+            code: 'blocked',
+            message: 'This collection key was retired (HTTP 410); queued events were discarded',
+          });
+          return;
+        }
+        if (kind === 'split') {
+          if (batch.length > 1) {
+            limit = Math.ceil(batch.length / 2);
+            continue;
+          }
+          // One event the server can never accept: drop it rather than block the queue.
+          const [event] = batch;
+          await this.update(() => {
+            this.state.events = this.state.events.filter((e) => e.event_id !== event.event_id);
+            this.state.dropped++;
+          }, true);
+          this.diagnose({
+            code: 'rejected',
+            message: `Collection refused this event with HTTP ${status}; it was dropped`,
+            eventId: event.event_id,
+          });
+          continue;
         }
         const raw: unknown = await response.json();
         const ids = new Set(batch.map((e) => e.event_id));
         const removed = acknowledgedIds(raw, ids);
         const ack = raw as BatchResult;
+        const steer = this.steering(ack.control, now);
+        let purged = 0;
         try {
           await this.update(() => {
             this.state.events = this.state.events.filter((e) => !removed.has(e.event_id));
+            if (steer?.purge) {
+              // The server asked for the rest of the queue to be discarded (poisoned data).
+              purged = this.state.events.length;
+              this.state.dropped += purged;
+              this.state.events = [];
+            }
+            const d = this.delivery();
+            if (d || steer) {
+              const next: DeliveryState = { ...d, key: this.keyPrint };
+              delete next.blocked;
+              delete next.retryAt;
+              // A valid acknowledgement without control releases earlier steering.
+              if (steer && Object.keys(steer.control).length) next.control = steer.control;
+              else delete next.control;
+              if (steer?.disabledUntil !== undefined && steer.disabledUntil > now)
+                next.retryAt = new Date(steer.disabledUntil).toISOString();
+              this.state.delivery = next;
+            }
           }, true);
         } catch {
           this.diagnose({
@@ -1118,6 +1388,11 @@ export class Analytics {
             code: 'rejected',
             message: rejected.reason,
             eventId: rejected.event_id ?? undefined,
+          });
+        if (purged)
+          this.diagnose({
+            code: 'rejected',
+            message: `The server discarded ${purged} queued events`,
           });
         // Accepted, but with a setup problem worth fixing (older servers send none).
         if (Array.isArray(ack.warnings))
@@ -1139,14 +1414,11 @@ export class Analytics {
       }
     }
   }
-  private backoff(minimum = 0) {
+  private backoff() {
     this.failures++;
     this.retryAt =
-      Date.now() +
-      Math.max(
-        minimum,
-        Math.min(MOBILE_LIMITS.retryMaximumMs, 1000 * 2 ** Math.min(this.failures, 6)),
-      );
+      this.clock().getTime() +
+      Math.max(backoffDelay(this.failures), this.delivery()?.control?.minRetryMs ?? 0);
     this.diagnose({
       code: 'network',
       message: 'Delivery deferred; events remain in persistent storage',
@@ -1154,7 +1426,7 @@ export class Analytics {
   }
   async dispose() {
     this.disposed = true;
-    if (this.timer) clearInterval(this.timer);
+    clearTimeout(this.timer);
     clearTimeout(this.runtimeRetry);
     for (const remove of this.cleanup) remove();
     this.activeController?.abort();

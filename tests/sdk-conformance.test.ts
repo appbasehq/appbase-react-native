@@ -31,6 +31,9 @@ interface Scenario {
     runtimeEnvironment?: AnalyticsOptions['runtimeEnvironment'];
     maxQueueSize?: number;
     batchSize?: number;
+    initiallyEnabled?: boolean;
+    maxQueueBytes?: number;
+    defaultApiUrl?: boolean;
   };
   actions: Record<string, any>[];
   expect: { requests: JSONValue; status: JSONValue; diagnostics: string[] };
@@ -40,6 +43,9 @@ const scenarios = readdirSync(folder)
   .filter((name) => name.endsWith('.json'))
   .sort()
   .map((name) => JSON.parse(readFileSync(`${folder}/${name}`, 'utf8')) as Scenario);
+// The public write-only key of a fixture app; its app ID scopes the simulated durable store.
+const fixtureKey = `ma_prod_00000000-0000-4000-8000-00000000c0de_${'0'.repeat(48)}`;
+const sdkPattern = /^(react-native|swift)\/\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function assertJSON(
@@ -48,6 +54,10 @@ function assertJSON(
   bindings: Map<string, string>,
   path = '$',
 ): void {
+  if (expected === '$sdk') {
+    expect(actual, path).toMatch(sdkPattern);
+    return;
+  }
   if (typeof expected === 'string' && expected.startsWith('$uuid:')) {
     expect(actual, path).toBeTypeOf('string');
     expect(actual, path).toMatch(uuidPattern);
@@ -112,11 +122,11 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
     };
     let revenueCat: RevenueCatIntegration | undefined;
     const transport: typeof fetch = async (url, init) => {
-      const path = new URL(String(url)).pathname;
+      const { pathname: path, origin } = new URL(String(url));
       const body = JSON.parse(String(init?.body));
-      requests.push({ path, body });
+      requests.push({ path, origin, body, headers: new Headers(init?.headers) });
       expect(init?.method).toBe('POST');
-      expect(new Headers(init?.headers).get('x-api-key')).toBe('fixture-public-write-only-key');
+      expect(new Headers(init?.headers).get('x-api-key')).toBe(fixtureKey);
       if (path === '/v1/events/batch')
         for (const event of body.events)
           expect(eventSchema.safeParse(event).success, JSON.stringify(event)).toBe(true);
@@ -139,6 +149,7 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
           event_id: events[entry.index].event_id,
           reason: entry.reason,
         })),
+        ...(response.control ? { control: response.control } : {}),
         ...(response.warnings
           ? {
               warnings: response.warnings.map((entry: { index: number; message: string }) => ({
@@ -150,10 +161,8 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
       });
     };
     const options: AnalyticsOptions = {
-      appId: 'conformance',
-      environment: 'development',
-      collectionKey: 'fixture-public-write-only-key',
-      apiUrl: 'https://conformance.invalid',
+      collectionKey: fixtureKey,
+      ...(scenario.config.defaultApiUrl ? {} : { apiUrl: 'https://conformance.invalid' }),
       platform: scenario.config.platform,
       appVersion: scenario.config.appVersion,
       runtimeEnvironment: scenario.config.runtimeEnvironment,
@@ -172,6 +181,8 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
       flushIntervalMs: 0,
       appState: { currentState: 'background', addEventListener: () => ({ remove() {} }) },
       maxQueueSize: scenario.config.maxQueueSize,
+      initiallyEnabled: scenario.config.initiallyEnabled,
+      maxQueueBytes: scenario.config.maxQueueBytes,
       batchSize: scenario.config.batchSize,
       fetch: transport,
       onDiagnostic: (diagnostic) => diagnostics.push(diagnostic.code),
@@ -186,6 +197,13 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
           case 'storage.patch':
             for (const [key, value] of store)
               store.set(key, JSON.stringify({ ...JSON.parse(value), ...action.fields }));
+            break;
+          case 'storage.corruptEvent':
+            for (const [key, value] of store) {
+              const saved = JSON.parse(value);
+              saved.events[action.index][action.field] = action.value;
+              store.set(key, JSON.stringify(saved));
+            }
             break;
           case 'identify':
             await sdk.identify(action.userId);
@@ -362,7 +380,24 @@ describe('mobile behavior contract v1 — React Native public facade', () => {
         }
       }
       expect(responses, 'Every scripted response must be exercised').toHaveLength(0);
-      assertJSON(requests, scenario.expect.requests, new Map());
+      // Origin and headers are compared only where a fixture lists them (only the listed headers).
+      const expected = scenario.expect.requests as {
+        origin?: string;
+        headers?: Record<string, string>;
+      }[];
+      const actual = (
+        requests as { path: string; origin: string; body: unknown; headers: Headers }[]
+      ).map(({ headers, origin, ...request }, index) => {
+        const names = Object.keys(expected[index]?.headers ?? {});
+        return {
+          ...request,
+          ...(expected[index]?.origin !== undefined ? { origin } : {}),
+          ...(names.length
+            ? { headers: Object.fromEntries(names.map((n) => [n, headers.get(n)])) }
+            : {}),
+        };
+      });
+      assertJSON(actual, scenario.expect.requests, new Map());
       const { queued, dropped, enabled, blocked } = await sdk.getStatus();
       assertJSON({ queued, dropped, enabled, blocked }, scenario.expect.status, new Map());
       expect(diagnostics).toEqual(scenario.expect.diagnostics);

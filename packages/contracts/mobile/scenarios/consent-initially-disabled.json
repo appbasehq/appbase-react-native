@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "id": "consent-initially-disabled",
+  "capability": "consent",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0",
+    "initiallyEnabled": false
+  },
+  "actions": [
+    {
+      "op": "track",
+      "name": "before_consent"
+    },
+    {
+      "op": "flush"
+    },
+    {
+      "op": "identify",
+      "userId": "pending-user"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "track",
+      "name": "after_restart"
+    },
+    {
+      "op": "setEnabled",
+      "enabled": false
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "clock.set",
+      "now": "2026-09-01T12:05:00.000Z"
+    },
+    {
+      "op": "setEnabled",
+      "enabled": true
+    },
+    {
+      "op": "track",
+      "name": "after_consent"
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:05:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:consented",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "after_consent",
+              "occurred_at": "2026-09-01T12:05:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": []
+  }
+}

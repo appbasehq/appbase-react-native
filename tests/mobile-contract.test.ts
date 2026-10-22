@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { eventSchema } from '../packages/contracts/src/index.js';
@@ -6,6 +7,9 @@ import { batchResultSchema } from '../packages/contracts/src/mobile-response.js'
 import { mobileContractArtifacts } from '../packages/contracts/src/mobile-schema.js';
 import { createReactNativeAnalytics } from '../sdks/react-native/src/index.js';
 import { jsonBytes, validProperties } from '../packages/sdk-core/src/properties.js';
+
+// A fixture app's public write-only key; its app ID scopes durable SDK state.
+const testKey = `ma_prod_${randomUUID()}_${'0'.repeat(48)}`;
 
 const read = (name: string) =>
   JSON.parse(
@@ -44,9 +48,7 @@ describe('canonical mobile contract', () => {
     expect(fingerprints.version).toBe(1);
     let id = 0;
     const sdk = await createReactNativeAnalytics({
-      appId: 'fingerprints',
-      environment: 'development',
-      collectionKey: 'public-fixture-key',
+      collectionKey: testKey,
       apiUrl: 'https://conformance.invalid',
       platform: 'test',
       appVersion: '1.0.0',

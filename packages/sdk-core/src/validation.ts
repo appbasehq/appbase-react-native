@@ -221,64 +221,61 @@ function validPaywallState(value: Record<string, unknown>): boolean {
   return uuidUnique(purchaseIds);
 }
 
-/** Validate saved state without normalizing or replacing it. Legacy optional workflow
- * maps remain optional; queued events need not use the current anonymous/user identity. */
-export function validStoredState(value: unknown): boolean {
-  if (
-    !record(value) ||
-    value.version !== 1 ||
-    !validUuid(value.installationId) ||
-    !validUuid(value.anonymousId) ||
-    typeof value.enabled !== 'boolean' ||
-    !Number.isSafeInteger(value.dropped) ||
-    Number(value.dropped) < 0 ||
-    (value.userId !== undefined &&
-      (typeof value.userId !== 'string' ||
-        !value.userId ||
-        value.userId.length > MOBILE_LIMITS.userIdLength)) ||
-    !Array.isArray(value.events) ||
-    value.events.length > MOBILE_LIMITS.maxQueueSize
-  )
-    return false;
-  const ids: string[] = [];
-  for (const event of value.events) {
-    if (
-      !record(event) ||
-      event.schema_version !== 1 ||
-      !validUuid(event.event_id) ||
-      event.installation_id !== value.installationId ||
-      !validUuid(event.anonymous_id) ||
-      !validEventName(event.name) ||
-      typeof event.occurred_at !== 'string' ||
-      !Number.isFinite(Date.parse(event.occurred_at)) ||
-      !oneOf(event.platform, ['ios', 'android', 'test']) ||
-      typeof event.app_version !== 'string' ||
-      !event.app_version ||
-      (event.runtime_environment !== undefined &&
-        !oneOf(event.runtime_environment, ['production', 'sandbox', 'development', 'unknown'])) ||
-      event.app_version.length > MOBILE_LIMITS.appVersionLength ||
-      (event.user_id !== undefined &&
-        (typeof event.user_id !== 'string' ||
-          !event.user_id ||
-          event.user_id.length > MOBILE_LIMITS.userIdLength)) ||
-      !validProperties(event.properties as never) ||
-      (event.onboarding !== undefined && !validOnboardingDefinition(event.onboarding))
-    )
-      return false;
-    ids.push(event.event_id);
-  }
-  if (!uuidUnique(ids)) return false;
-  for (const key of ['onboarding', 'paywalls', 'revenuecatIdentity'])
-    if (value[key] !== undefined && !record(value[key])) return false;
-  if (record(value.onboarding) && !validOnboardingState(value.onboarding)) return false;
-  if (record(value.paywalls) && !validPaywallState(value.paywalls)) return false;
-  const link = value.revenuecatIdentity;
-  if (
-    record(link) &&
-    ((link.projectId !== undefined && !validProviderId(link.projectId)) ||
-      !validProviderId(link.appUserId) ||
-      !validUuid(link.eventId))
-  )
-    return false;
-  return true;
+/** The identity root of saved state. Unreadable roots fail closed: replacing them would mint a new
+ * installation, and a newer SDK's state must survive a downgrade untouched. */
+export function validStoredRoot(value: unknown): value is Record<string, unknown> {
+  return (
+    record(value) &&
+    value.version === 1 &&
+    validUuid(value.installationId) &&
+    validUuid(value.anonymousId) &&
+    typeof value.enabled === 'boolean' &&
+    Number.isSafeInteger(value.dropped) &&
+    Number(value.dropped) >= 0 &&
+    (value.userId === undefined ||
+      (typeof value.userId === 'string' &&
+        !!value.userId &&
+        value.userId.length <= MOBILE_LIMITS.userIdLength)) &&
+    Array.isArray(value.events)
+  );
 }
+
+/** One queued event as this installation saved it; queued events need not use the current
+ * anonymous/user identity. */
+export function validStoredEvent(event: unknown, installationId: string): boolean {
+  return (
+    record(event) &&
+    event.schema_version === 1 &&
+    validUuid(event.event_id) &&
+    event.installation_id === installationId &&
+    validUuid(event.anonymous_id) &&
+    validEventName(event.name) &&
+    typeof event.occurred_at === 'string' &&
+    Number.isFinite(Date.parse(event.occurred_at)) &&
+    oneOf(event.platform, ['ios', 'android', 'test']) &&
+    typeof event.app_version === 'string' &&
+    !!event.app_version &&
+    (event.runtime_environment === undefined ||
+      oneOf(event.runtime_environment, ['production', 'sandbox', 'development', 'unknown'])) &&
+    event.app_version.length <= MOBILE_LIMITS.appVersionLength &&
+    (event.user_id === undefined ||
+      (typeof event.user_id === 'string' &&
+        !!event.user_id &&
+        event.user_id.length <= MOBILE_LIMITS.userIdLength)) &&
+    validProperties(event.properties as never) &&
+    (event.onboarding === undefined || validOnboardingDefinition(event.onboarding))
+  );
+}
+
+/** Saved workflow sections, each readable or not as a whole; legacy states may omit them. */
+export const validStoredWorkflows = {
+  onboarding: (value: unknown) =>
+    value === undefined || (record(value) && validOnboardingState(value)),
+  paywalls: (value: unknown) => value === undefined || (record(value) && validPaywallState(value)),
+  revenuecatIdentity: (link: unknown) =>
+    link === undefined ||
+    (record(link) &&
+      (link.projectId === undefined || validProviderId(link.projectId)) &&
+      validProviderId(link.appUserId) &&
+      validUuid(link.eventId)),
+};

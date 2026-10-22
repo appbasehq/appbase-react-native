@@ -6,13 +6,15 @@ package = JSON.parse(File.read(File.join(__dir__, 'package.json')))
 Pod::Spec.new do |s|
   s.name = 'AppbaseReactNative'
   s.version = package['version']
-  s.summary = 'Automatic Development, TestFlight and App Store detection for Appbase analytics.'
+  s.summary = 'Build detection (Development, TestFlight, App Store) and the privacy manifest for Appbase analytics.'
   s.homepage = 'https://appbase.so'
   s.license = { :type => 'MIT', :file => 'LICENSE' }
   s.author = 'Appbase'
   s.platforms = { :ios => '15.1' }
   s.source = { :git => 'https://github.com/appbasehq/appbase-react-native.git', :tag => "v#{s.version}" }
   s.source_files = 'ios/*.{m,swift}'
+  # What the SDK collects, for the app's merged privacy report; identical to the Swift SDK's.
+  s.resource_bundles = { 'AppbaseReactNativePrivacy' => ['ios/PrivacyInfo.xcprivacy'] }
   s.swift_version = '5.9'
   s.frameworks = 'StoreKit'
   if respond_to?(:install_modules_dependencies, true)

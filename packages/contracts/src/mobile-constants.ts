@@ -33,8 +33,18 @@ export const MOBILE_LIMITS = {
   defaultRequestTimeoutMs: 10000,
   maxRequestTimeoutMs: 300000,
   maxBatchesPerFlush: 20,
-  retryMaximumMs: 60000,
+  /** Full-jitter backoff: a random delay up to min(retryMaximumMs, retryBaseMs × 2^(failures−1)). */
+  retryBaseMs: 2000,
+  retryMaximumMs: 900000,
   retryAfterMaximumMs: 86400000,
+  /** Persisted cool-down after a configuration rejection (3xx, 401, 403, 404, other 4xx). */
+  blockedRetryMs: 3600000,
+  /** Serialized UTF-8 bytes of queued events; the newest event is dropped beyond it. */
+  defaultQueueBytes: 1572864,
+  maxQueueBytes: 5242880,
+  /** Upper bounds SDKs clamp server `control` values to. */
+  controlMaxRetryMs: 3600000,
+  controlMaxDisableMs: 604800000,
   feedbackMessageLength: 4000,
   feedbackEmailLength: 254,
   profileNameLength: 200,

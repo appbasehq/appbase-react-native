@@ -5,13 +5,14 @@ import {
   FeedbackError,
   type AnalyticsOptions,
 } from '../sdks/react-native/src/index.js';
+
+// A fixture app's public write-only key; its app ID scopes durable SDK state.
+const testKey = `ma_prod_${randomUUID()}_${'0'.repeat(48)}`;
 async function client(fetcher: typeof fetch, options: Partial<AnalyticsOptions> = {}) {
   const storage = new Map<string, string>();
   return createReactNativeAnalytics({
-    appId: 'contact',
-    environment: 'development',
-    apiUrl: 'http://local',
-    collectionKey: 'public-key',
+    apiUrl: 'https://local.test',
+    collectionKey: testKey,
     appVersion: '1.2',
     platform: 'test',
     generateId: randomUUID,

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { reportGranularities } from './reporting.js';
+import { isTimeZone, reportGranularities } from './reporting.js';
 import type { ReportViewResult } from './types.js';
 
 /** Aggregate reports only. User journeys and free-form feedback require separate access. */
@@ -35,6 +35,8 @@ export const agentReportQuerySchema = z
     granularity: z.enum(reportGranularities).default('daily'),
     environment: z.enum(['production', 'sandbox', 'development']).default('production'),
     compare: z.literal('previous_period').optional(),
+    /** IANA time zone whose midnights start the range's days; defaults to the owner's. */
+    timezone: z.string().max(64).optional(),
     flow_id: label.optional(),
     flow_version: label.optional(),
     /** A version whose steps changed without a new version number (listed in the catalog). */
@@ -47,8 +49,10 @@ export const agentReportQuerySchema = z
     if (from < 0 || to <= from || to - from > 366 * 5 * 86400000)
       ctx.addIssue({
         code: 'custom',
-        message: 'Use a positive UTC range of at most 1,830 days, starting in 1970 or later',
+        message: 'Use a positive range of at most 1,830 days, starting in 1970 or later',
       });
+    if (q.timezone !== undefined && !isTimeZone(q.timezone))
+      ctx.addIssue({ code: 'custom', message: 'Use an IANA time zone, such as Europe/London' });
     if (q.compare && from - (to - from) < 0)
       ctx.addIssue({ code: 'custom', message: 'The comparison must start in 1970 or later' });
     if (Boolean(q.flow_id) !== Boolean(q.flow_version))

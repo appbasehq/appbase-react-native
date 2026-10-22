@@ -2,9 +2,15 @@ import { z } from 'zod';
 import { MOBILE_LIMITS as limits } from './mobile-constants.js';
 export { MOBILE_LIMITS, MOBILE_CONTRACT_VERSION } from './mobile-constants.js';
 export { feedbackSubmissionSchema, feedbackReceiptSchema } from './mobile-feedback.js';
-export { batchResultSchema } from './mobile-response.js';
+export { batchResultSchema, collectionControlSchema } from './mobile-response.js';
 import { revenuecatIdentityPropertiesSchema } from './revenuecat.js';
-import type { AnalyticsEvent, JourneyEvent, StoredServerEvent } from './types.js';
+import type {
+  AnalyticsEvent,
+  JourneyEvent,
+  StoredBillingEvent,
+  StoredEvent,
+  StoredServerEvent,
+} from './types.js';
 export type * from './types.js';
 export * from './revenuecat.js';
 export * from './reporting.js';
@@ -468,6 +474,12 @@ export type ServerEvent = z.infer<typeof serverEventSchema>;
 /** Whether a journey event came from the app's backend rather than the app. */
 export const isServerEvent = (event: JourneyEvent): event is StoredServerEvent =>
   event.source === 'server';
+/** Whether a journey event is a RevenueCat billing event of the person's linked customer. */
+export const isBillingEvent = (event: JourneyEvent): event is StoredBillingEvent =>
+  event.source === 'revenuecat';
+/** Whether a journey event came from the app itself (the SDK). */
+export const isAppEvent = (event: JourneyEvent): event is StoredEvent =>
+  !isServerEvent(event) && !isBillingEvent(event);
 export const journeyCursorSchema = z
   .object({
     at: z.iso.datetime(),

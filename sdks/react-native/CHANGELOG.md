@@ -12,6 +12,21 @@ Wire schema v1, stored identities and queued events carry over between all versi
 
 Nothing yet.
 
+## 0.12.0 (2026-10-22)
+
+**Upgrade:** no code changes for apps set up as in the guide (`createReactNativeAnalytics` with the app's `ma_prod_…` key). Remove `appId` and `environment` if you pass them, and replace `createAnalytics` with `createReactNativeAnalytics`. `apiUrl`, `platform` and `generateId` are now optional; you can drop `expo-crypto` if only analytics used it. Leave `apiUrl: 'https://api.appbase.so'` in place or remove it to use the new collection host. Run `pod install` or rebuild the Expo builds (the pod adds a privacy manifest).
+
+- The `appId` and `environment` options are removed: the app's `ma_prod_…` collection key names its app. Any other key format (retired `ma_dev_…` keys, keys without an app ID) now throws when creating the client, and plain HTTP is accepted only for local development hosts. Stored identities and queued events are unchanged.
+- `apiUrl` is optional and defaults to Appbase's collection host, `https://in.appbase.so`, for batches and feedback. An explicit `apiUrl` (a local server, or the `https://api.appbase.so` earlier setups pass) still wins.
+- `createReactNativeAnalytics` is the only factory. In an app it takes `platform` from `Platform.OS` (the option is now optional) and always detects the build environment. `createAnalytics`, the `Analytics.create` value and `detectAppbaseRuntimeEnvironment` are no longer exported: they skipped build detection, so their events counted as Production. `Analytics` remains a type.
+- Delivery follows one [status table](https://github.com/appbasehq/appbase-react-native/blob/main/packages/contracts/mobile/behavior.md#delivery-status-table) shared with the Swift SDK. Redirects, 401, 403, 404 and other 4xx block delivery and retry hourly, also across restarts (`resume()` still retries at once). `Retry-After` on any error is kept across restarts and never bypassed. 400 and 413 halve the batch, dropping only a single event the server cannot accept. 410 discards the queue and stops that key. Network failures back off with full jitter up to 15 minutes (was 1 minute). Requests use `redirect: 'manual'` instead of `'error'`.
+- Obeys an optional server [`control`](https://github.com/appbasehq/appbase-react-native/blob/main/packages/contracts/mobile/behavior.md#server-control) in batch acknowledgements (retry floor, longer flush interval, smaller batches, pause until a time, purge), clamped and kept across restarts until an acknowledgement arrives without it. Appbase uses it to protect collection during incidents; apps need no code.
+- `initiallyEnabled: false` waits for consent on a new installation: nothing is stored or sent, not even an identifier, until `setEnabled(true)`, which records the first open. Existing installations keep their saved choice.
+- The queue also has a byte budget, 1.5 MiB by default (`maxQueueBytes`, up to 5 MiB); beyond it the newest event is dropped, as when the queue is full. An unreadable stored event is dropped (counted in `dropped`) and an unreadable onboarding or paywall section is cleared, with a `storage` diagnostic, instead of failing every launch; only unreadable stored identity still fails creation.
+- `generateId` is optional: the SDK generates time-ordered UUIDv7 IDs itself, so apps no longer need `expo-crypto` or another UUID package for analytics. An app that passes `generateId` keeps working.
+- Batch and feedback requests send `X-Appbase-SDK: react-native/<version>` and `X-Appbase-Dropped` (events this install dropped), so Appbase can see which SDK versions installs run (`sdk_versions` in `GET /v1/agent/setup`).
+- The iOS pod now ships a privacy manifest (`PrivacyInfo.xcprivacy`, the same as the Swift SDK's) declaring Device ID, User ID, Product Interaction, Purchase History, Email Address and Name (Analytics, from `setProfile`), and Email Address and Other User Content (App Functionality, from feedback). Run `pod install` or rebuild.
+
 ## 0.11.0 (2026-10-21)
 
 **Upgrade:** no code changes. You can remove `projectId` from `connectRevenueCat` and `linkRevenueCatUser`; apps that keep passing it work unchanged.

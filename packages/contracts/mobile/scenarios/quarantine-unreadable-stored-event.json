@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "id": "quarantine-unreadable-stored-event",
+  "capability": "delivery",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "track",
+      "name": "item_a"
+    },
+    {
+      "op": "track",
+      "name": "item_b"
+    },
+    {
+      "op": "storage.corruptEvent",
+      "index": 1,
+      "field": "properties",
+      "value": {
+        "nested": {
+          "x": 1
+        }
+      }
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "flush"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "flush"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:b",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "item_b",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 1,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": ["storage"]
+  }
+}

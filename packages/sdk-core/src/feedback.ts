@@ -29,7 +29,8 @@ export async function submitFeedback(
     generateId: () => string;
     fetch: typeof fetch;
     apiUrl: string;
-    collectionKey: string;
+    /** Key, sender and device clock, as on batches. */
+    headers: Record<string, string>;
     timeout: number;
   },
 ): Promise<FeedbackReceipt> {
@@ -58,21 +59,23 @@ export async function submitFeedback(
   try {
     const response = await options.fetch(`${options.apiUrl.replace(/\/$/, '')}/v1/feedback`, {
       method: 'POST',
-      redirect: 'error',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': options.collectionKey },
+      // Never follow: a redirect is a configuration problem, like on batches.
+      redirect: 'manual',
+      headers: options.headers,
       body: JSON.stringify({ ...context, id, message, ...(email ? { email } : {}) }),
       signal: controller.signal,
     });
-    if (!response.ok) {
+    if (!response.ok || response.type === 'opaqueredirect') {
       const wait = retryDelay(response.headers.get('Retry-After'), Date.now()) / 1000;
       const [code, text] =
         response.status === 429
           ? (['rate_limited', 'Too many messages. Please try again later.'] as const)
           : response.status === 409
             ? (['conflict', 'This submission ID was already used for another message.'] as const)
-            : response.status === 400
+            : response.status === 400 || response.status === 413
               ? (['invalid_input', 'Check your message and email, then try again.'] as const)
-              : response.status === 401 || response.status === 403
+              : response.type === 'opaqueredirect' ||
+                  (response.status >= 300 && response.status < 500)
                 ? (['configuration', 'Contact is unavailable. Please try again later.'] as const)
                 : (['unavailable', 'Could not confirm delivery. Please try again.'] as const);
       throw new FeedbackError(text, id, code, Number.isFinite(wait) && wait > 0 ? wait : undefined);

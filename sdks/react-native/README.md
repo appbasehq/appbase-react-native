@@ -4,19 +4,19 @@ A small explicit-event SDK for Expo and bare React Native. Its core entry point 
 
 ## Compatibility and reliability
 
-This guide covers version **0.11.0**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
+This guide covers version **0.12.0**. What changed in each version, and what an upgrade needs, is in the [changelog](https://appbase.so/docs/sdk-changelog.md) (also `CHANGELOG.md` in the package). SDK package versions and the wire contract are independent; this release continues to use schema version 1.
 
-The public entry point now bundles `packages/sdk-core`, a framework-independent TypeScript implementation. No private workspace package is needed by consumers, and existing `createReactNativeAnalytics` imports remain valid. `createAnalytics` is an additive alias for adapter-based use. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
+The public entry point bundles `packages/sdk-core`, a framework-independent TypeScript implementation; no private workspace package is needed by consumers. `createReactNativeAnalytics` is the one factory: in an app it takes the platform from `Platform.OS` and detects the build environment. Swift has its own native implementation of the same versioned contract. See [shared compatibility policy](https://appbase.so/docs/sdk-compatibility.md).
 
-Initialization fails without overwriting storage when saved identity/events/workflows are corrupt. Failed acknowledgements leave events queued; duplicated, unknown, empty or contradictory server receipts never discard them. Injected UUIDs must be valid and fresh. Invalid configuration throws before storing a new installation. Observe diagnostics for runtime capture failures; `track()` returning does not prove server receipt. Await `flush()` and inspect `getStatus()`, then verify server delivery separately.
+Initialization fails without overwriting storage only when the saved identity itself is unreadable; an unreadable queued event is dropped (counted in `dropped`) and an unreadable onboarding/paywall section is cleared, with a `storage` diagnostic. The queue holds at most 1,000 events and 1.5 MiB (`maxQueueSize`, `maxQueueBytes` up to 5 MiB); beyond either the newest event is dropped. Failed acknowledgements leave events queued; duplicated, unknown, empty or contradictory server receipts never discard them. Injected UUIDs must be valid and fresh. Invalid configuration throws before storing a new installation. Observe diagnostics for runtime capture failures; `track()` returning does not prove server receipt. Await `flush()` and inspect `getStatus()`, then verify server delivery separately.
 
 ## Install
 
-Usually your coding agent installs it: copy the prompt from **App setup → Connect** in your Appbase dashboard to the agent. To install it yourself, use the public npm package; no repository checkout is needed:
+Usually your coding agent installs it: copy the prompt from **Settings → Connect** in your Appbase dashboard to the agent. To install it yourself, use the public npm package; no repository checkout is needed:
 
 ```sh
-npm install @appbasehq/react-native@0.11.0
-npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto
+npm install @appbasehq/react-native@0.12.0
+npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo
 ```
 
 The package is published under the Appbase-owned `@appbasehq` npm organization.
@@ -25,22 +25,18 @@ The core has no runtime dependencies or private workspace imports. Native adapte
 
 For SDK source development, follow the build and verification commands in the [source repository](https://github.com/appbasehq/appbase-react-native#build-and-verify-this-source).
 
-Expo example (install compatible packages with `npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo expo-crypto`):
+Expo example (install compatible packages with `npx expo install @react-native-async-storage/async-storage @react-native-community/netinfo`):
 
 ```ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { AppState, Platform } from 'react-native';
-import { randomUUID } from 'expo-crypto';
+import { AppState } from 'react-native';
 import { createReactNativeAnalytics } from '@appbasehq/react-native';
 
 export const analyticsReady = createReactNativeAnalytics({
-  apiUrl: 'https://api.appbase.so',
   collectionKey: 'YOUR_SAVED_COLLECTION_KEY', // The app's one key, used in every build.
-  platform: Platform.OS === 'ios' ? 'ios' : 'android',
   appVersion: '1.0.0', // Supply the actual app/build version.
   storage: AsyncStorage,
-  generateId: randomUUID,
   appState: AppState, // Required for automatic repeat app-open tracking.
   networkInfo: NetInfo,
   onDiagnostic: (diagnostic) => {
@@ -50,7 +46,7 @@ export const analyticsReady = createReactNativeAnalytics({
 });
 ```
 
-Bare React Native can use the same storage/network adapters and any secure UUID generator supported by that app. Initialization is asynchronous; handle initialization/storage failures in app startup without blocking the user from using the app. API URLs require HTTPS except loopback and private-network development hosts (`localhost`, `*.local`, `127.0.0.1`, `10.x`, `172.16–31.x`, `192.168.x`). On a physical phone, localhost points to the phone; use the hosted API or a development server on your network.
+Bare React Native can use the same storage and network adapters. The SDK takes the platform from `Platform.OS` and generates its own time-ordered UUIDv7 IDs, so no UUID package is needed. Initialization is asynchronous; handle initialization/storage failures in app startup without blocking the user from using the app. Events and feedback go to Appbase's collection host, `https://in.appbase.so`; pass `apiUrl` only to send to a local or self-run server instead (apps that pass `https://api.appbase.so` keep working). Such URLs require HTTPS except loopback and private-network development hosts (`localhost`, `*.local`, `127.0.0.1`, `10.x`, `172.16–31.x`, `192.168.x`). On a physical phone, localhost points to the phone; use a development server on your network.
 
 ## Automatic build environment
 
@@ -64,6 +60,8 @@ Each app has one collection key for every build. The SDK labels each event with 
 | Anything that cannot tell (Android release, iOS 15, failed lookup)                    | `unknown`             | Production  |
 
 Metro resolves the package's React Native entry, which checks `__DEV__` and then asks the bundled iOS module for Apple's verified `AppTransaction.shared.environment`. The module is autolinked: run `pod install` (bare React Native) or rebuild your Expo development/production build (`npx expo prebuild` or EAS). Expo Go cannot load native modules, but it is always a debug build and records Development. Detection is bounded to 2.5 seconds. After an `unknown` result, it asks again in the background about 5 seconds, 30 seconds, 2 minutes and 10 minutes later; later events carry the first detected answer, and reports give the install's earlier events that build. It never calls `refresh()` and never asks for permissions or authentication. Pass `runtimeEnvironment` to override it, for example for an internal ad hoc build. Events already queued keep their original metadata, including an absent field; the field never changes identity or storage.
+
+The same iOS pod bundles a privacy manifest (`PrivacyInfo.xcprivacy`, identical to the Swift SDK's) describing what the SDK collects: Device ID, User ID, Product Interaction and Purchase History for analytics, Email Address and Name for analytics when the app calls `setProfile`, and Email Address and Other User Content for app functionality from feedback. Xcode merges it into the app's privacy report; it does not replace the app's App Store answers.
 
 ## Automatic app opens
 
@@ -131,7 +129,7 @@ Use positive whole numbers (`1`, `2`, …) for `version`, up to `Number.MAX_SAFE
 
 **Increment the version when you add, remove, rename or reorder steps**, or when you redesign screens and want them measured separately. Editing questions, options or their wording can keep the version: reports merge them by question and option ID, show the newest wording, and date added or removed options. An added option's percentage counts only the attempts that were offered it.
 
-Forgetting to increment never loses events or breaks the app. If a version's steps change without a new number, the server keeps both definitions and reports show the new steps as a separate funnel, labelled with the date they changed. The SDK reports a `configuration` diagnostic, which is also printed once to the console in development builds (or when no `onDiagnostic` is set), and App setup and the [agent setup status](https://appbase.so/docs/agent-setup.md#verify-delivery) list the version. On a device with a saved attempt, a question edit continues it; changed steps start a new attempt unless the saved one already finished.
+Forgetting to increment never loses events or breaks the app. If a version's steps change without a new number, the server keeps both definitions and reports show the new steps as a separate funnel, labelled with the date they changed. The SDK reports a `configuration` diagnostic, which is also printed once to the console in development builds (or when no `onDiagnostic` is set), and Settings and the [agent setup status](https://appbase.so/docs/agent-setup.md#verify-delivery) list the version. On a device with a saved attempt, a question edit continues it; changed steps start a new attempt unless the saved one already finished.
 
 Omit `version` to derive one automatically from the steps and questions; then any question or option change, including wording, starts a new version. Existing flows without questions keep their original automatic version.
 
@@ -180,7 +178,7 @@ Answers inherit app/environment, identity, flow/version, attempt and step. Value
 
 The chart shows the latest eligible submission per question/attempt, with option counts and percentages of **answered attempts**. Multiple-choice totals may exceed 100%; skips, no recorded answer and conflicting revisions stay separate. Definitions, date/window rules and report limits are in [the tracking plan](https://appbase.so/docs/tracking-plan.md#onboarding-answers).
 
-Collection keys contain the app ID and a storage namespace (`ma_prod_…` for single-key apps; older apps may also hold a retired `ma_dev_…` key). The backend authenticates the full key hash; it never trusts a client-supplied environment property. Legacy keys continue to work with their original `appId` and `environment` options. If supplied with a new key, those options must match. Key replacement preserves local identity and queued events.
+Each app's collection key (`ma_prod_…`) contains its app ID, which scopes stored identity and queued events; any other key format, including retired `ma_dev_…` keys, is a configuration error. The backend authenticates the full key hash; it never trusts a client-supplied environment property. Replacing the key of the same app preserves local identity and queued events.
 
 ## Paywalls
 
@@ -292,13 +290,14 @@ The resulting `revenuecat_identity_linked` event has `revenuecat_app_user_id`, `
 - `setProfile({ email, name })`: after `identify`, show this email and name for the account in the dashboard instead of its ID. Stored apart from events; each call replaces the profile and null/omitted fields clear. Ignored (with a diagnostic) before `identify`.
 - `reset()`: on logout (before RevenueCat `logOut()`)/account switch, create a new anonymous ID and clear onboarding attempts, paywall handles and saved RevenueCat link deduplication. Previously queued events keep their original identity.
 - `setEnabled(false)`: disable collection and clear the pending queue, onboarding attempts, paywall handles and saved RevenueCat link deduplication. Already sent requests cannot be recalled. Opt-out persists across restarts.
-- `setEnabled(true)`: resume future collection.
+- `setEnabled(true)`: resume future collection, or give consent for an installation created with `initiallyEnabled: false`.
+- `initiallyEnabled: false` (option): for apps that ask for analytics consent first. A new installation stores and sends nothing, not even an identifier, until `setEnabled(true)`, which records the first open; declining stores nothing, so ask again on a later launch. Once stored, the installation's saved choice wins.
 - `flush()`: send queued events; concurrent calls share one request sequence.
 - `getIdentity()` / `getStatus()`: inspect IDs or pending queue size; these contain no reporting credentials.
 - `resume()`: retry after fixing a blocked configuration or re-enabling server collection (usually requires a new client instance if credentials change).
 - `dispose()`: remove lifecycle listeners/timers and abort in-flight delivery; queued events persist.
 
-Default bounds: 1000 queued events, batches of 50, flush every 15 seconds, 10-second request timeout. Temporary failures back off up to 60 seconds (Retry-After can extend this). A full queue drops the newest event and reports a diagnostic. Permanent per-event server rejections are removed and reported. Authentication/collection-paused responses block delivery and retain events. HTTP 429 honors Retry-After up to one day, including calls to resume() and connectivity callbacks. getStatus().retryAt is the earliest retry time in epoch milliseconds (or zero).
+Default bounds: 1000 queued events, batches of 50, flush every 15 seconds, 10-second request timeout. Temporary failures back off with full jitter up to 15 minutes. A full queue drops the newest event and reports a diagnostic. Permanent per-event server rejections are removed and reported. Authentication/collection-paused responses block delivery, keep events and retry hourly, also after a restart; `resume()` retries at once. `Retry-After` (up to one day) is kept across restarts and never bypassed, including by `resume()` and connectivity callbacks. A 410 means the app was deleted: the queue is discarded and the key stops. All of this follows the shared [status table](https://github.com/appbasehq/appbase-react-native/blob/main/packages/contracts/mobile/behavior.md#delivery-status-table). getStatus().retryAt is the earliest retry time in epoch milliseconds (or zero).
 
 `app_first_open` is recorded automatically once per app/environment storage namespace. Foreground `app_active` is captured if AppState is supplied, including initialization when `currentState` is already active. Meaningful activity is explicit. The Expo test harness verifies native iOS behavior; Android device validation and integration into the real consumer app remain separate steps.
 
@@ -312,7 +311,7 @@ Explicit contact works while tracking is disabled; in that case analytics identi
 
 ## Configure new users
 
-**Required for SDK acquisition and retention:** your coding agent chooses one new-user event and optional exact property filters for the app, then previews and saves it with app-scoped setup access. App setup shows the saved event. Use the [definition guide](https://appbase.so/docs/first-use.md) for the API, selection examples and acceptance checklist.
+**Required for SDK acquisition and retention:** your coding agent chooses one new-user event and optional exact property filters for the app, then previews and saves it with app-scoped setup access. Use the [definition guide](https://appbase.so/docs/first-use.md) for the API, selection examples and acceptance checklist.
 
 No dedicated SDK marker call is needed. Reuse an existing event such as `onboarding_started` with `flow_id`, or track an ordinary entry event. The server counts each resolved identity once, at its earliest matching occurrence across recorded history. A brand-new app can explicitly select automatic `app_first_open`; existing apps must audit returning-user and upgrade paths before choosing it. Completion/purchase events exclude people who dropped out earlier.
 

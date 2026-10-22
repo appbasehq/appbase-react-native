@@ -6,6 +6,9 @@ import {
   type StorageAdapter,
   type AnalyticsEvent,
 } from '../sdks/react-native/src/index.js';
+
+// A fixture app's public write-only key; its app ID scopes durable SDK state.
+const testKey = `ma_prod_${randomUUID()}_${'0'.repeat(48)}`;
 function storage(): StorageAdapter {
   const data = new Map<string, string>();
   return {
@@ -21,10 +24,8 @@ const success = (events: AnalyticsEvent[]) =>
   });
 function options(extra: Partial<AnalyticsOptions> = {}): AnalyticsOptions {
   return {
-    appId: 'test-app',
-    environment: 'development',
     apiUrl: 'http://localhost:4400',
-    collectionKey: 'test',
+    collectionKey: testKey,
     platform: 'test',
     appVersion: '1.0',
     storage: storage(),
@@ -371,11 +372,11 @@ describe('React Native delivery core', () => {
     expect((await resumed.getStatus()).enabled).toBe(false);
     await resumed.dispose();
   });
-  it('isolates queues by app and environment', async () => {
+  it('isolates queues by app', async () => {
     const store = storage();
     const a = await createReactNativeAnalytics(options({ storage: store }));
     const b = await createReactNativeAnalytics(
-      options({ storage: store, environment: 'production', apiUrl: 'https://example.test' }),
+      options({ storage: store, collectionKey: `ma_prod_${randomUUID()}_${'0'.repeat(48)}` }),
     );
     expect((await a.getIdentity()).anonymousId).not.toBe((await b.getIdentity()).anonymousId);
     await a.dispose();
@@ -658,46 +659,24 @@ describe('mobile onboarding helper', () => {
   });
 });
 
-describe('key-derived environments and server backoff', () => {
-  it('separates local identity by key environment and preserves it through key rotation', async () => {
+describe('key-derived scope and server backoff', () => {
+  it("scopes identity by the key's app, keeps it through key rotation and refuses other keys", async () => {
     const store = storage(),
       id = randomUUID();
-    const key = (env: string, random = 'a') => `ma_${env}_${id}_${random.repeat(48)}`;
-    const make = (collectionKey: string) =>
-      createReactNativeAnalytics(
-        options({
-          appId: undefined,
-          environment: undefined,
-          collectionKey,
-          apiUrl: 'https://analytics.example',
-          storage: store,
-        }),
-      );
-    const dev = await make(key('dev'));
-    const original = await dev.getIdentity();
-    await dev.dispose();
-    const rotated = await make(key('dev', 'b'));
+    const key = (random = 'a') => `ma_prod_${id}_${random.repeat(48)}`;
+    const make = (collectionKey: string, apiUrl = 'https://analytics.example') =>
+      createReactNativeAnalytics(options({ collectionKey, apiUrl, storage: store }));
+    const first = await make(key());
+    const original = await first.getIdentity();
+    await first.dispose();
+    const rotated = await make(key('b'));
     expect(await rotated.getIdentity()).toEqual(original);
-    const prod = await make(key('prod'));
-    expect((await prod.getIdentity()).anonymousId).not.toBe(original.anonymousId);
-    await expect(
-      createReactNativeAnalytics(
-        options({ collectionKey: key('prod'), appId: id, environment: 'development' }),
-      ),
-    ).rejects.toThrow('does not match');
+    // Retired development keys and keys without an app ID no longer configure a client.
+    for (const retired of [`ma_dev_${id}_${'a'.repeat(48)}`, 'legacy-key', `ma_prod_${id}`])
+      await expect(make(retired)).rejects.toThrow('ma_prod_');
     // Plain HTTP is allowed only for local development hosts.
-    await expect(
-      createReactNativeAnalytics(
-        options({
-          collectionKey: key('prod'),
-          appId: undefined,
-          environment: undefined,
-          apiUrl: 'http://analytics.example',
-        }),
-      ),
-    ).rejects.toThrow('HTTPS');
+    await expect(make(key(), 'http://analytics.example')).rejects.toThrow('HTTPS');
     await rotated.dispose();
-    await prod.dispose();
   });
   it('honors 429 Retry-After even when resume or a network callback is invoked', async () => {
     vi.useFakeTimers();

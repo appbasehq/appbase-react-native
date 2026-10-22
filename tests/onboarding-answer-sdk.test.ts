@@ -6,6 +6,9 @@ import {
   type OnboardingOptions,
 } from '../sdks/react-native/src/index.js';
 
+// A fixture app's public write-only key; its app ID scopes durable SDK state.
+const testKey = `ma_prod_${randomUUID()}_${'0'.repeat(48)}`;
+
 const definition = (): OnboardingOptions => ({
   id: 'welcome',
   version: 1,
@@ -28,9 +31,7 @@ describe('answer helper delivery and definitions', () => {
     const requests: AnalyticsEvent[][] = [],
       bytes: number[] = [];
     const sdk = await createReactNativeAnalytics({
-      appId: 'test',
-      environment: 'development',
-      collectionKey: 'test',
+      collectionKey: testKey,
       apiUrl: 'https://local.test',
       platform: 'test',
       appVersion: '1',
@@ -83,9 +84,7 @@ describe('answer helper delivery and definitions', () => {
     let offline = true;
     const make = () =>
       createReactNativeAnalytics({
-        appId: 'test',
-        environment: 'development',
-        collectionKey: 'test',
+        collectionKey: testKey,
         apiUrl: 'https://local.test',
         platform: 'test',
         appVersion: '1',
@@ -168,9 +167,7 @@ describe('answer helper delivery and definitions', () => {
   });
   it('versions question changes and rejects invalid or conflicting question definitions', async () => {
     const sdk = await createReactNativeAnalytics({
-      appId: 'test',
-      environment: 'development',
-      collectionKey: 'test',
+      collectionKey: testKey,
       apiUrl: 'https://local.test',
       platform: 'test',
       appVersion: '1',

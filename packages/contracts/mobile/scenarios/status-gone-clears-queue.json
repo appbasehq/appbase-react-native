@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "id": "status-gone-clears-queue",
+  "capability": "delivery",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0"
+  },
+  "actions": [
+    {
+      "op": "track",
+      "name": "saved"
+    },
+    {
+      "op": "network",
+      "response": {
+        "kind": "http",
+        "status": 410
+      }
+    },
+    {
+      "op": "flush"
+    },
+    {
+      "op": "track",
+      "name": "after_gone"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "track",
+      "name": "after_restart"
+    },
+    {
+      "op": "flush"
+    },
+    {
+      "op": "resume"
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:saved",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "saved",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 2,
+      "enabled": true,
+      "blocked": true
+    },
+    "diagnostics": ["blocked"]
+  }
+}

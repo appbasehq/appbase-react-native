@@ -1,12 +1,8 @@
-/** React Native public facade. The private core is bundled into the published package. */
-import { createAnalytics, type RuntimeEnvironment } from '@mobile-analytics/sdk-core';
-export * from '@mobile-analytics/sdk-core';
-
 /**
- * Outside a React Native app (Node, tests, web) there is no native build signal. Metro resolves
- * `index.native` instead, which detects Development, TestFlight and App Store builds.
+ * Entry outside a React Native app (Node, tests): no native build signal, so events carry no
+ * build label, and `platform` must be passed. Metro resolves `index.native` in apps instead.
  */
-export async function detectAppbaseRuntimeEnvironment(): Promise<RuntimeEnvironment> {
-  return 'unknown';
-}
-export const createReactNativeAnalytics = createAnalytics;
+import { factory } from './facade.js';
+export * from './facade.js';
+
+export const createReactNativeAnalytics = factory({});

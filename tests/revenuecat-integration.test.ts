@@ -11,6 +11,9 @@ import {
   type StorageAdapter,
 } from '../sdks/react-native/src/index.js';
 
+// A fixture app's public write-only key; its app ID scopes durable SDK state.
+const testKey = `ma_prod_${randomUUID()}_${'0'.repeat(48)}`;
+
 function storage(): StorageAdapter & { hold(): () => void } {
   const data = new Map<string, string>();
   let gate: Promise<void> | null = null;
@@ -35,10 +38,8 @@ async function sdk(extra: Partial<AnalyticsOptions> = {}) {
   const sent: AnalyticsEvent[] = [];
   let id = 0;
   const analytics = await createReactNativeAnalytics({
-    appId: 'revenuecat-integration',
-    environment: 'development',
     apiUrl: 'http://localhost:4400',
-    collectionKey: 'test',
+    collectionKey: testKey,
     platform: 'test',
     appVersion: '1.0',
     storage: storage(),

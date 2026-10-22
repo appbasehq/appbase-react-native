@@ -58,6 +58,14 @@ export interface OnboardingAnswers {
 export type RuntimeEnvironment = 'production' | 'sandbox' | 'development' | 'unknown';
 /** Production is the App Store plus anything without a detected build; Sandbox is TestFlight/App Review. */
 export type ReportingEnvironment = 'production' | 'sandbox' | 'development';
+/** The signed-in owner's settings, the same in every browser they use. */
+export interface AccountSettings {
+  /** IANA zone whose midnights start reporting days; null (UTC) until a browser reports one. */
+  time_zone: string | null;
+  /** Follow the zone of the browser the owner last used, rather than a zone they chose. */
+  time_zone_automatic: boolean;
+}
+
 export interface ReportingScope {
   id: string;
   environment: ReportingEnvironment;
@@ -65,6 +73,8 @@ export interface ReportingScope {
   from: string;
   to: string;
   asOf: string;
+  /** IANA time zone whose midnights start the range's days (UTC unless the reader chose one). */
+  timeZone: string;
 }
 
 export interface AnalyticsEvent {
@@ -87,16 +97,27 @@ export interface BatchResult {
   rejected: { event_id: string | null; reason: string }[];
   /** Accepted events with a setup problem worth fixing (absent from older servers). */
   warnings?: { event_id: string; message: string }[];
+  /** Server steering for this key's SDKs (see behavior.md); absent means none. */
+  control?: CollectionControl;
+}
+/** Persisted and clamped by SDKs; a valid acknowledgement without it clears the stored one. */
+export interface CollectionControl {
+  /** Floor for every retry delay. */
+  min_retry_ms?: number;
+  /** Periodic flush interval; SDKs only lengthen their configured interval with it. */
+  flush_interval_ms?: number;
+  /** Most events per request (1–100). */
+  max_batch?: number;
+  /** Send nothing before this time; events keep queueing. */
+  disabled_until?: string;
+  /** Discard every queued event this response did not acknowledge, counting them as dropped. */
+  purge?: boolean;
 }
 export interface AppRecord {
   id: string;
   name: string;
   slug: string;
   collection_enabled: boolean;
-  /** Legacy configuration; reports use discovered flow definitions. */
-  flow_id: string;
-  flow_version: string;
-  flow_steps: string[];
   /** Chosen in the setup flow: in the App Store, or not released yet. Null for older apps. */
   release_status?: 'live' | 'unreleased' | null;
   app_store_id?: string | null;
@@ -134,7 +155,8 @@ export interface UsageWindow {
 }
 export interface IngestionUsage {
   app: { minute: UsageWindow; day: UsageWindow };
-  service: { minute: UsageWindow; day: UsageWindow };
+  /** All of the owning account's apps together; absent for apps without an owner. */
+  account?: { minute: UsageWindow; day: UsageWindow };
 }
 export interface Report {
   reporting_scope?: ReportingScope;
@@ -208,7 +230,7 @@ export interface AdSpendReport {
   ad_return?: AdReturnReport;
   /** The same after store commission and tax (Apple's 15% for Small Business Program members). */
   ad_return_after_fees?: AdReturnReport;
-  /** The owner's saved choices (App setup / the card): which one to show, and Small Business. */
+  /** The owner's saved choices (Settings / the card): which one to show, and Small Business. */
   fee_settings?: { ad_return_after_fees: boolean; apple_small_business: boolean };
 }
 /**
@@ -271,7 +293,7 @@ export interface AdReturnReport {
   return_if_trials_pay: number | null;
 }
 
-/** An app's ad account connection as App setup shows it; the token is never returned. */
+/** An app's ad account connection as Settings shows it; the token is never returned. */
 export interface AdConnectionStatus {
   provider: 'meta';
   account: { id: string; name: string | null; currency: string; timezone: string };
@@ -287,7 +309,7 @@ export interface AdConnectionStatus {
    * whole account or both count the same promoted app. */
   overlaps?: { app_id: string; app_name: string; whole_account: boolean }[];
 }
-/** App setup's ad spend state: this app's connection and the owner's reusable saved tokens. */
+/** Settings' ad spend state: this app's connection and the owner's reusable saved tokens. */
 export interface AdSpendSetup {
   connections: AdConnectionStatus[];
   providers: 'meta'[];
@@ -550,8 +572,46 @@ export interface StoredServerEvent {
   properties: Properties;
   subject: string;
 }
-/** A journey interleaves app events and server events by time. */
-export type JourneyEvent = StoredEvent | StoredServerEvent;
+/**
+ * A RevenueCat event of the customer linked to this person alone (live webhook or imported
+ * history), in the journey's billing environment. `name` says what it meant, by the reports' own
+ * rules: `trial_started` (also a renewal into another trial period), `trial_set_to_cancel`, `auto_renew_turned_on`, `payment_failed` (the
+ * store retries; access continues until `grace_ends_at`), `trial_expired`, `trial_converted`,
+ * `subscribed`, `renewed`, `set_to_cancel`, `cancelled` (another reason, such as a billing error),
+ * `subscription_expired`, `refunded`, `refund_reversed`, `purchased`, `subscription_extended`,
+ * `product_changed`, `subscription_paused`, `transferred`, or another RevenueCat type in lowercase.
+ */
+export interface StoredBillingEvent {
+  /** RevenueCat's event ID (lowercase), so a webhook and its imported copy are one event. */
+  event_id: string;
+  name: string;
+  occurred_at: string;
+  /** When the webhook arrived; null for an event recovered from imported history. */
+  received_at: string | null;
+  source: 'revenuecat';
+  subject: string;
+  properties: {
+    /** RevenueCat's event type, such as `CANCELLATION`. */
+    type: string;
+    product_id: string | null;
+    period_type: string | null;
+    store: string | null;
+    environment: string | null;
+    app_user_id: string | null;
+    transaction_id: string | null;
+    /** The cancellation or expiration reason, such as `UNSUBSCRIBE` or `BILLING_ERROR`. */
+    reason: string | null;
+    /** USD, as RevenueCat reports it; negative for a refund. */
+    price: number | null;
+    currency: string | null;
+    price_in_purchased_currency: number | null;
+    expires_at: string | null;
+    grace_ends_at: string | null;
+    revenuecat_event_id: string;
+  };
+}
+/** A journey interleaves app events, server events and RevenueCat billing events by time. */
+export type JourneyEvent = StoredEvent | StoredServerEvent | StoredBillingEvent;
 export interface TrendPoint {
   date: string;
   active_users: number;
@@ -617,6 +677,11 @@ export interface PersonSummary {
   features: { name: string; count: number }[];
   /** Feedback they sent, from any build. */
   feedback: { count: number; last: string | null };
+  /**
+   * RevenueCat app user IDs linked to them (by the app, or a historical import), most recently
+   * linked first. `project_id` is the RevenueCat project when exactly one is known, else null.
+   */
+  revenuecat_customers: { app_user_id: string; project_id: string | null; linked_at: string }[];
 }
 export interface DashboardStats {
   granularity: ReportGranularity;

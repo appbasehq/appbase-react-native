@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "id": "sdk-identity-headers",
+  "capability": "delivery",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0",
+    "maxQueueSize": 2
+  },
+  "actions": [
+    { "op": "track", "name": "first_saved" },
+    { "op": "track", "name": "over_capacity" },
+    { "op": "flush" },
+    {
+      "op": "feedback.submit",
+      "input": {
+        "message": "Hello",
+        "submissionId": "12345678-1234-4234-8234-1234567890f1"
+      }
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "path": "/v1/events/batch",
+        "headers": {
+          "X-Appbase-SDK": "$sdk",
+          "X-Appbase-Dropped": "1",
+          "X-Appbase-Sent-At": "2026-09-01T12:00:00.000Z"
+        },
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            },
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:saved",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "first_saved",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      },
+      {
+        "path": "/v1/feedback",
+        "headers": {
+          "X-Appbase-SDK": "$sdk",
+          "X-Appbase-Dropped": "1"
+        },
+        "body": {
+          "platform": "ios",
+          "app_version": "1.0.0",
+          "anonymous_id": "$uuid:anonymous",
+          "id": "12345678-1234-4234-8234-1234567890f1",
+          "message": "Hello"
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 1,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": ["queue_full"]
+  }
+}

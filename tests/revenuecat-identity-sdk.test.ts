@@ -6,6 +6,9 @@ import {
   type AnalyticsOptions,
   type Diagnostic,
 } from '../sdks/react-native/src/index.js';
+
+// A fixture app's public write-only key; its app ID scopes durable SDK state.
+const testKey = `ma_prod_${randomUUID()}_${'0'.repeat(48)}`;
 function harness(extra: Partial<AnalyticsOptions> = {}) {
   const data = new Map<string, string>(),
     received: AnalyticsEvent[] = [],
@@ -13,10 +16,8 @@ function harness(extra: Partial<AnalyticsOptions> = {}) {
   let failStorage = false,
     offline = false;
   const options: AnalyticsOptions = {
-    appId: 'identity-test',
-    environment: 'development',
     apiUrl: 'http://localhost:4400',
-    collectionKey: 'test',
+    collectionKey: testKey,
     platform: 'test',
     appVersion: 'test',
     generateId: randomUUID,

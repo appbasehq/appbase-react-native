@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "id": "default-collection-host",
+  "capability": "delivery",
+  "config": {
+    "now": "2026-09-01T12:00:00.000Z",
+    "platform": "ios",
+    "appVersion": "1.0.0",
+    "defaultApiUrl": true
+  },
+  "actions": [
+    {
+      "op": "flush"
+    },
+    {
+      "op": "feedback.submit",
+      "input": {
+        "message": "Hello",
+        "submissionId": "12345678-1234-4234-8234-1234567890f2"
+      }
+    }
+  ],
+  "expect": {
+    "requests": [
+      {
+        "origin": "https://in.appbase.so",
+        "path": "/v1/events/batch",
+        "body": {
+          "events": [
+            {
+              "schema_version": 1,
+              "event_id": "$uuid:first",
+              "installation_id": "$uuid:installation",
+              "anonymous_id": "$uuid:anonymous",
+              "name": "app_first_open",
+              "occurred_at": "2026-09-01T12:00:00.000Z",
+              "platform": "ios",
+              "app_version": "1.0.0",
+              "properties": {}
+            }
+          ]
+        }
+      },
+      {
+        "origin": "https://in.appbase.so",
+        "path": "/v1/feedback",
+        "body": {
+          "platform": "ios",
+          "app_version": "1.0.0",
+          "anonymous_id": "$uuid:anonymous",
+          "id": "12345678-1234-4234-8234-1234567890f2",
+          "message": "Hello"
+        }
+      }
+    ],
+    "status": {
+      "queued": 0,
+      "dropped": 0,
+      "enabled": true,
+      "blocked": false
+    },
+    "diagnostics": []
+  }
+}
